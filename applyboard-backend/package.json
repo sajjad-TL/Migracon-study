@@ -1,0 +1,21 @@
+{
+    "name": "applyboard-backend",
+    "version": "1.0.0",
+    "description": "Backend for ApplyBoard application",
+    "main": "server.js",
+    "scripts": {
+        "dev": "node server.js",
+        "start": "node server.js"
+    },
+    "author": "",
+    "license": "ISC",
+    "keywords": [],
+    "dependencies": {
+        "bcryptjs": "^3.0.2",
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.7",
+        "express": "^5.1.0",
+        "mongoose": "^8.13.2",
+        "validator": "^13.15.0"
+    }
+}

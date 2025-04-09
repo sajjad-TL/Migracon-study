@@ -1,0 +1,37 @@
+const { isStrongPassword, isValidEmail } = require('../utils/validators');
+
+module.exports = (req, res, next) => {
+  const {
+    firstName,
+    lastName,
+    phone,
+    email,
+    confirmEmail,
+    password,
+    consentAccepted
+  } = req.body;
+
+  if (!firstName || !lastName || !phone || !email || !confirmEmail || !password) {
+    return res.status(400).json({ message: 'All fields are required.' });
+  }
+
+  // Validate email
+  if (!isValidEmail(email, confirmEmail)) {
+    return res.status(400).json({ message: 'Email is invalid or does not match.' });
+  }
+
+  // Validate strong password
+  if (!isStrongPassword(password, firstName, lastName)) {
+    return res.status(400).json({
+      message:
+        'Password must be at least 12 characters, include upper/lowercase, a number, a symbol, and not contain your name.',
+    });
+  }
+
+  // Validate consent acceptance
+  if (!consentAccepted) {
+    return res.status(400).json({ message: 'Consent must be accepted to register.' });
+  }
+
+  next();
+};
