@@ -6,18 +6,15 @@ module.exports = (req, res, next) => {
     lastName,
     phone,
     email,
-    confirmEmail,
     password,
     consentAccepted
   } = req.body;
 
-  if (!firstName || !lastName || !phone || !email || !confirmEmail || !password) {
+  if (!firstName || !lastName || !phone || !email  || !password) {
     return res.status(400).json({ message: 'All fields are required.' });
   }
 
-  if (!isValidEmail(email, confirmEmail)) {
-    return res.status(400).json({ message: 'Email is invalid or does not match.' });
-  }
+ 
 
   if (!isStrongPassword(password, firstName, lastName)) {
     return res.status(400).json({
