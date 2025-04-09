@@ -15,12 +15,10 @@ module.exports = (req, res, next) => {
     return res.status(400).json({ message: 'All fields are required.' });
   }
 
-  // Validate email
   if (!isValidEmail(email, confirmEmail)) {
     return res.status(400).json({ message: 'Email is invalid or does not match.' });
   }
 
-  // Validate strong password
   if (!isStrongPassword(password, firstName, lastName)) {
     return res.status(400).json({
       message:
@@ -28,7 +26,6 @@ module.exports = (req, res, next) => {
     });
   }
 
-  // Validate consent acceptance
   if (!consentAccepted) {
     return res.status(400).json({ message: 'Consent must be accepted to register.' });
   }
