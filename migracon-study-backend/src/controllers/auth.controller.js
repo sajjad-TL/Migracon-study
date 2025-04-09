@@ -50,7 +50,9 @@ const loginUser = async (req, res) => {
       expiresIn: "7d",
     });
 
-    return res.status(200).json({ message: "Login success", token });
+    return res
+      .status(200)
+      .json({ message: "Login success", userId: user._id, token });
   } catch (error) {
     console.log(error);
     return res.status(500).json({ message: "Server error, try again later" });
