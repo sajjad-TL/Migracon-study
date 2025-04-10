@@ -1,12 +1,27 @@
-// utils/sendEmail.js
+const nodemailer = require("nodemailer");
 
-const sendEmail = async (to, subject, message) => {
-    // In production, you’d use nodemailer/sendgrid/etc.
-    console.log(`--- Email Sent ---`);
-    console.log(`To: ${to}`);
-    console.log(`Subject: ${subject}`);
-    console.log(`Message: ${message}`);
-  };
-  
-  module.exports = sendEmail;
-  
+const sendEmail = async (to, subject, html) => {
+  try {
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to,
+      subject,
+      html,
+    });
+
+    console.log("Email sent to:", to);
+  } catch (error) {
+    console.error("Error sending email:", error);
+    throw error;
+  }
+};
+
+module.exports = sendEmail;

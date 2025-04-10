@@ -2,7 +2,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const User = require("../models/user.model");
-const sendEmail = require("../utils/sendEmail"); // Add this utility
+const sendEmail = require("../utils/sendEmail");
 
 // Register User
 const registerUser = async (req, res) => {
@@ -10,8 +10,7 @@ const registerUser = async (req, res) => {
 
   try {
     const existingUser = await User.findOne({ email });
-    if (existingUser)
-      return res.status(400).json({ message: "User already exists" });
+    if (existingUser) return res.status(400).json({ message: "User already exists" });
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
@@ -44,14 +43,10 @@ const loginUser = async (req, res) => {
 
   try {
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ message: "Email not found" });
-    }
+    if (!user) return res.status(404).json({ message: "Email not found" });
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ message: "Incorrect password" });
-    }
+    if (!isPasswordValid) return res.status(401).json({ message: "Incorrect password" });
 
     const token = jwt.sign({ id: user._id }, process.env.jwt_secret_key, {
       expiresIn: "7d",
@@ -74,17 +69,18 @@ const forgotPassword = async (req, res) => {
 
   try {
     const user = await User.findOne({ email });
-    if (!user)
-      return res.status(404).json({ message: "User not found" });
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const hash = crypto.createHash("sha256").update(otp).digest("hex");
 
     user.resetPasswordToken = hash;
     user.resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
     await user.save();
 
-    await sendEmail(user.email, "Password Reset Code", `Your OTP is: ${otp}`);
+    const emailContent = `<h2>Your password reset code</h2><p><strong>${otp}</strong> is your OTP. It expires in 10 minutes.</p>`;
+
+    await sendEmail(user.email, "Password Reset Code", emailContent);
 
     return res.status(200).json({
       message: "OTP has been sent to your email",
@@ -112,8 +108,7 @@ const verifyCode = async (req, res) => {
       resetPasswordExpires: { $gt: Date.now() },
     });
 
-    if (!user)
-      return res.status(400).json({ message: "Invalid or expired code" });
+    if (!user) return res.status(400).json({ message: "Invalid or expired code" });
 
     return res.status(200).json({ message: "Code verified successfully" });
   } catch (err) {
@@ -138,8 +133,7 @@ const resetPassword = async (req, res) => {
       resetPasswordExpires: { $gt: Date.now() },
     });
 
-    if (!user)
-      return res.status(400).json({ message: "Invalid or expired session" });
+    if (!user) return res.status(400).json({ message: "Invalid or expired session" });
 
     user.password = await bcrypt.hash(password, 12);
     user.resetPasswordToken = undefined;
