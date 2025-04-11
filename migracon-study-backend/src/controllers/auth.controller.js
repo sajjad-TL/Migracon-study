@@ -3,10 +3,13 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const User = require("../models/user.model");
 const sendEmail = require("../utils/sendEmail"); // Add this utility
+const { OAuth2Client } = require("google-auth-library");
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Register User
 const registerUser = async (req, res) => {
-  const { firstName, lastName, phone, email, password, consentAccepted } = req.body;
+  const { firstName, lastName, phone, email, password, consentAccepted } =
+    req.body;
 
   try {
     const existingUser = await User.findOne({ email });
@@ -74,8 +77,7 @@ const forgotPassword = async (req, res) => {
 
   try {
     const user = await User.findOne({ email });
-    if (!user)
-      return res.status(404).json({ message: "User not found" });
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
     const hash = crypto.createHash("sha256").update(otp).digest("hex");
@@ -153,10 +155,96 @@ const resetPassword = async (req, res) => {
   }
 };
 
+const googleLogin = async (req, res) => {
+  const { token } = req.body;
+
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const { email, given_name, family_name, picture } = ticket.getPayload();
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      user = await User.create({
+        email,
+        firstName: given_name,
+        lastName: family_name,
+        password: "",
+        consentAccepted: true,
+        phone: "",
+        profilePicture: picture,
+      });
+    }
+
+    const jwtToken = jwt.sign({ id: user._id }, process.env.jwt_secret_key, {
+      expiresIn: "7d",
+    });
+
+    return res.status(200).json({
+      message: "Google login success",
+      userId: user._id,
+      token: jwtToken,
+      name: `${user.firstName} ${user.lastName}`,
+    });
+  } catch (err) {
+    console.error("Google login error:", err);
+    res.status(401).json({ message: err});
+  }
+};
+
+const axios = require("axios");
+
+// Facebook Login
+const facebookLogin = async (req, res) => {
+  const { accessToken, userID } = req.body;
+
+  try {
+    const fbUrl = `https://graph.facebook.com/v17.0/${userID}?fields=id,email,first_name,last_name,picture&access_token=${accessToken}`;
+    const response = await axios.get(fbUrl);
+
+    const { email, first_name, last_name, picture } = response.data;
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      user = await User.create({
+        email,
+        firstName: first_name,
+        lastName: last_name,
+        password: "",
+        consentAccepted: true,
+        phone: "",
+        profilePicture: picture.data.url,
+      });
+    }
+
+    const token = jwt.sign({ id: user._id }, process.env.jwt_secret_key, {
+      expiresIn: "7d",
+    });
+
+    return res.status(200).json({
+      message: "Facebook login success",
+      userId: user._id,
+      token,
+      name: `${user.firstName} ${user.lastName}`,
+    });
+  } catch (error) {
+    console.error("Facebook login error:", error);
+    return res.status(401).json({ message: "Facebook login failed" });
+  }
+};
+
+
 module.exports = {
   registerUser,
   loginUser,
   forgotPassword,
   verifyCode,
   resetPassword,
+  googleLogin,
+  facebookLogin
 };
