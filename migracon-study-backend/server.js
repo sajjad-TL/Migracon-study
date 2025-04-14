@@ -8,6 +8,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/api/auth', require('./src/routes/auth.routes'));
+app.use('/student', require('./src/routes/student.routes'))
 
 connectDB();
 const PORT = process.env.PORT || 5000;
