@@ -190,11 +190,6 @@ const googleLogin = async (req, res) => {
     res.status(401).json({ message: err});
   }
 };
-
-
-
-
-
 module.exports = {
   registerUser,
   loginUser,
