@@ -196,47 +196,8 @@ const googleLogin = async (req, res) => {
   }
 };
 
-const axios = require("axios");
 
-// Facebook Login
-const facebookLogin = async (req, res) => {
-  const { accessToken, userID } = req.body;
 
-  try {
-    const fbUrl = `https://graph.facebook.com/v17.0/${userID}?fields=id,email,first_name,last_name,picture&access_token=${accessToken}`;
-    const response = await axios.get(fbUrl);
-
-    const { email, first_name, last_name, picture } = response.data;
-
-    let user = await User.findOne({ email });
-
-    if (!user) {
-      user = await User.create({
-        email,
-        firstName: first_name,
-        lastName: last_name,
-        password: "",
-        consentAccepted: true,
-        phone: "",
-        profilePicture: picture.data.url,
-      });
-    }
-
-    const token = jwt.sign({ id: user._id }, process.env.jwt_secret_key, {
-      expiresIn: "7d",
-    });
-
-    return res.status(200).json({
-      message: "Facebook login success",
-      userId: user._id,
-      token,
-      name: `${user.firstName} ${user.lastName}`,
-    });
-  } catch (error) {
-    console.error("Facebook login error:", error);
-    return res.status(401).json({ message: "Facebook login failed" });
-  }
-};
 
 
 module.exports = {
@@ -246,5 +207,4 @@ module.exports = {
   verifyCode,
   resetPassword,
   googleLogin,
-  facebookLogin
 };
