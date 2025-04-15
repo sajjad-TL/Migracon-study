@@ -13,7 +13,8 @@ const registerAgent = async (req, res) => {
 
   try {
     const existingAgent = await Agent.findOne({ email });
-    if (existingAgent) return res.status(400).json({ message: "Agent already exists" });
+    if (existingAgent)
+      return res.status(400).json({ message: "Agent already exists" });
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
@@ -24,7 +25,7 @@ const registerAgent = async (req, res) => {
       email,
       password: hashedPassword,
       consentAccepted,
-      profilePicture : null
+      profilePicture: null,
     });
 
     res.status(201).json({
@@ -50,7 +51,8 @@ const loginAgent = async (req, res) => {
     if (!agent) return res.status(404).json({ message: "Email not found" });
 
     const isPasswordValid = await bcrypt.compare(password, agent.password);
-    if (!isPasswordValid) return res.status(401).json({ message: "Incorrect password" });
+    if (!isPasswordValid)
+      return res.status(401).json({ message: "Incorrect password" });
 
     const token = jwt.sign({ id: agent._id }, process.env.jwt_secret_key, {
       expiresIn: "7d",
@@ -113,7 +115,8 @@ const verifyCode = async (req, res) => {
       resetPasswordExpires: { $gt: Date.now() },
     });
 
-    if (!agent) return res.status(400).json({ message: "Invalid or expired code" });
+    if (!agent)
+      return res.status(400).json({ message: "Invalid or expired code" });
 
     return res.status(200).json({ message: "Code verified successfully" });
   } catch (err) {
@@ -138,7 +141,8 @@ const resetPassword = async (req, res) => {
       resetPasswordExpires: { $gt: Date.now() },
     });
 
-    if (!agent) return res.status(400).json({ message: "Invalid or expired session" });
+    if (!agent)
+      return res.status(400).json({ message: "Invalid or expired session" });
 
     agent.password = await bcrypt.hash(password, 12);
     agent.resetPasswordToken = undefined;
@@ -189,9 +193,44 @@ const googleLogin = async (req, res) => {
     });
   } catch (err) {
     console.error("Google login error:", err);
-    res.status(401).json({ message: err});
+    res.status(401).json({ message: err });
   }
 };
+
+const updateAgent = async (req, res) => {
+  const { agentId, ...updatedValues } = req.body;
+
+  if (!agentId || !updatedValues) {
+    return res
+      .status(400)
+      .json({ message: "Agent id and values to be updated are required." });
+  }
+
+  try {
+    const updatedAgent = await Agent.findByIdAndUpdate(
+      agentId,
+      { $set: updatedValues },
+      { new: true,  runValidators: true }
+    );
+
+    if (!updatedAgent) {
+      return res.stauts(404).json({ message: "Agent not found." });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Agent updated successfully.",
+      agent: updatedAgent,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      message: "Error updating agent. Try again later",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   registerAgent,
   loginAgent,
@@ -199,4 +238,5 @@ module.exports = {
   verifyCode,
   resetPassword,
   googleLogin,
+  updateAgent,
 };

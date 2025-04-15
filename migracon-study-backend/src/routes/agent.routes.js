@@ -7,7 +7,8 @@ const {
   googleLogin,
   registerAgent,
   loginAgent,
-} = require("../controllers/auth.controller");
+  updateAgent,
+} = require("../controllers/agent.controller");
 const validateRegister = require("../middlewares/validateRegister");
 
 router.post("/register", validateRegister, registerAgent);
@@ -16,5 +17,6 @@ router.post("/forgot-password", forgotPassword);
 router.post("/verify-code", verifyCode);
 router.post("/reset-password", resetPassword);
 router.post("/google-login", googleLogin);
+router.patch("/update", updateAgent);
 
 module.exports = router;
