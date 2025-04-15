@@ -4,7 +4,7 @@ const agentSchema = new mongoose.Schema({
   firstName: { type: String, required: true },
   lastName:  { type: String, required: true },
   phone:     { type: String},
-  email:     { type: String, required: true, unique: true },
+  email:     { type: String, required: true, unique: true,  match: [/^\S+@\S+\.\S+$/, "Please enter a valid email address"] },
   password:  { type: String},
   consentAccepted: { type: Boolean, required: true },
   profilePicture : {type : String},

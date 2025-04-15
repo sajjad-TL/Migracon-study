@@ -1,5 +1,6 @@
 const Student = require("../models/student.model");
 const mongoose = require('mongoose')
+const Agent = require('../models/agent.model')
 
 
 const addNewStudent = async (req, res) => {
@@ -19,6 +20,7 @@ const addNewStudent = async (req, res) => {
     countryOfInterest,
     serviceOfInterest,
     conditionsAccepted,
+    agentId
   } = req.body;
 
   if (
@@ -65,6 +67,7 @@ const addNewStudent = async (req, res) => {
       countryOfInterest,
       serviceOfInterest,
       conditionsAccepted,
+      agentId
     })
     if(student){
       return res.status(201).json({success: true,message : 'Student created successfully', name: `${student.firstName} ${student.lastName}`, id: student._id})
@@ -142,10 +145,68 @@ const deleteStudent = async (req, res) => {
   }
 };
 
-const getAllStudents = async (req, res) => {}
+
+
+const getAllStudents = async (req, res) => {
+  const { agentId } = req.body;
+
+  try {
+    const agent = await Agent.findById(agentId);
+    if (!agent) {
+      return res.status(404).json({ message: 'Agent does not exist.' });
+    }
+
+    const allStudents = await Student.find({ agentId });
+
+    res.status(200).json({
+      message: 'Students fetched successfully',
+      students: allStudents,
+    });
+  } catch (error) {
+    console.error('Error fetching students:', error);
+    res.status(500).json({ message: 'Server error, please try again later.' });
+  }
+};
+
+const updateStudent = async (req, res) => {
+  const { studentId, ...updatedValues } = req.body;
+
+  if (!studentId) {
+    return res.status(400).json({ message: "Student ID is required" });
+  }
+
+  try {
+    const updatedStudent = await Student.findByIdAndUpdate(
+      studentId,
+      { $set: updatedValues },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedStudent) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Student updated successfully",
+      student: updatedStudent
+    });
+
+  } catch (error) {
+    console.error("Error updating student:", error);
+    return res.status(500).json({
+      message: "Error updating student",
+      error: error.message
+    });
+  }
+};
+
+
 
 module.exports = {
   addNewStudent,
   getStudent,
-  deleteStudent
+  deleteStudent,
+  getAllStudents,
+  updateStudent
 };

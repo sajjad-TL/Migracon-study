@@ -24,6 +24,7 @@ const registerAgent = async (req, res) => {
       email,
       password: hashedPassword,
       consentAccepted,
+      profilePicture : null
     });
 
     res.status(201).json({

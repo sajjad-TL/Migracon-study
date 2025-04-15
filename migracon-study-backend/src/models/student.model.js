@@ -10,7 +10,7 @@ const studentSchema = new mongoose.Schema(
     passportNumber: { type: String, required: true },
     passportExpiryDate: { type: Date, required: true },
     gender: { type: String, required: true },
-    email: { type: String, unique: true, required: true },
+    email: { type: String, unique: true, required: true,  match: [/^\S+@\S+\.\S+$/, "Please enter a valid email address"] },
     phoneNumber: { type: String, required: true },
     referralSource: { type: String },
     status: { type: String },
