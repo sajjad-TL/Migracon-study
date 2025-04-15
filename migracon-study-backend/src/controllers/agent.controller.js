@@ -190,6 +190,7 @@ const googleLogin = async (req, res) => {
       agentId: agent._id,
       token: jwtToken,
       name: `${agent.firstName} ${agent.lastName}`,
+      profilePicture : agent.profilePicture
     });
   } catch (err) {
     console.error("Google login error:", err);

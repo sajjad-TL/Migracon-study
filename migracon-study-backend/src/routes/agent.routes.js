@@ -12,11 +12,11 @@ const {
 const validateRegister = require("../middlewares/validateRegister");
 
 router.post("/register", validateRegister, registerAgent);
-router.post("/login", loginAgent);
+router.get("/login", loginAgent);
 router.post("/forgot-password", forgotPassword);
 router.post("/verify-code", verifyCode);
 router.post("/reset-password", resetPassword);
-router.post("/google-login", googleLogin);
+router.get("/google-login", googleLogin);
 router.patch("/update", updateAgent);
 
 module.exports = router;
