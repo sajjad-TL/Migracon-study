@@ -17,6 +17,7 @@ const studentSchema = new mongoose.Schema(
     countryOfInterest: { type: String },
     serviceOfInterest: { type: String },
     conditionsAccepted: { type: Boolean, required: true },
+    agentId: { type: mongoose.Schema.Types.ObjectId, ref: "Agent" },
   },
   { timestamps: true }
 );

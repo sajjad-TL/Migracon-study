@@ -1,5 +1,7 @@
 const Student = require("../models/student.model");
 const mongoose = require('mongoose')
+
+
 const addNewStudent = async (req, res) => {
   const {
     firstName,
@@ -139,6 +141,8 @@ const deleteStudent = async (req, res) => {
     });
   }
 };
+
+const getAllStudents = async (req, res) => {}
 
 module.exports = {
   addNewStudent,

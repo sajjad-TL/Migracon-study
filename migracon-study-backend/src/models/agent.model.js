@@ -1,6 +1,6 @@
  const mongoose = require('mongoose');
 
-const userSchema = new mongoose.Schema({
+const agentSchema = new mongoose.Schema({
   firstName: { type: String, required: true },
   lastName:  { type: String, required: true },
   phone:     { type: String},
@@ -12,4 +12,4 @@ const userSchema = new mongoose.Schema({
   resetPasswordExpires: { type: Date },
   }, { timestamps: true });
 
-module.exports = mongoose.model("User", userSchema);
+module.exports = mongoose.model("Agent", agentSchema);
