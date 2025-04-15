@@ -1,7 +1,6 @@
 const Student = require("../models/student.model");
-const mongoose = require('mongoose')
-const Agent = require('../models/agent.model')
-
+const mongoose = require("mongoose");
+const Agent = require("../models/agent.model");
 
 const addNewStudent = async (req, res) => {
   const {
@@ -20,7 +19,7 @@ const addNewStudent = async (req, res) => {
     countryOfInterest,
     serviceOfInterest,
     conditionsAccepted,
-    agentId
+    agentId,
   } = req.body;
 
   if (
@@ -45,7 +44,6 @@ const addNewStudent = async (req, res) => {
     const existingStudent = await Student.findOne({
       $or: [{ email }, { passportNumber }],
     });
-    
 
     if (existingStudent) {
       return res.status(400).json({ message: "Student already exists" });
@@ -67,14 +65,19 @@ const addNewStudent = async (req, res) => {
       countryOfInterest,
       serviceOfInterest,
       conditionsAccepted,
-      agentId
-    })
-    if(student){
-      return res.status(201).json({success: true,message : 'Student created successfully', name: `${student.firstName} ${student.lastName}`, id: student._id})
+      agentId,
+    });
+    if (student) {
+      return res.status(201).json({
+        success: true,
+        message: "Student created successfully",
+        name: `${student.firstName} ${student.lastName}`,
+        id: student._id,
+      });
     }
   } catch (error) {
-    console.log(error)
-    return res.status(500).json({ message : error.message , error : error})
+    console.log(error);
+    return res.status(500).json({ message: error.message, error: error });
   }
 };
 
@@ -83,7 +86,8 @@ const getStudent = async (req, res) => {
 
   if (!passportNumber && !studentId && !email) {
     return res.status(400).json({
-      message: 'Please provide at least one of: passport number, student ID, or email'
+      message:
+        "Please provide at least one of: passport number, student ID, or email",
     });
   }
 
@@ -97,22 +101,23 @@ const getStudent = async (req, res) => {
     }
 
     if (queryConditions.length === 0) {
-      return res.status(400).json({ message: 'Invalid input provided.' });
+      return res.status(400).json({ message: "Invalid input provided." });
     }
 
     const student = await Student.findOne({ $or: queryConditions });
 
     if (!student) {
-      return res.status(404).json({ success: false, message: 'Student not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Student not found" });
     }
 
     return res.status(200).json({ success: true, student });
-
   } catch (error) {
     console.error(error);
     return res.status(500).json({
-      message: 'Something went wrong',
-      error: error.message
+      message: "Something went wrong",
+      error: error.message,
     });
   }
 };
@@ -134,18 +139,16 @@ const deleteStudent = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Student deleted successfully",
-      student: deletedStudent
+      student: deletedStudent,
     });
   } catch (error) {
     console.error(error);
     return res.status(500).json({
       message: "Error deleting student",
-      error: error.message
+      error: error.message,
     });
   }
 };
-
-
 
 const getAllStudents = async (req, res) => {
   const { agentId } = req.body;
@@ -153,18 +156,18 @@ const getAllStudents = async (req, res) => {
   try {
     const agent = await Agent.findById(agentId);
     if (!agent) {
-      return res.status(404).json({ message: 'Agent does not exist.' });
+      return res.status(404).json({ message: "Agent does not exist." });
     }
 
     const allStudents = await Student.find({ agentId });
 
     res.status(200).json({
-      message: 'Students fetched successfully',
+      message: "Students fetched successfully",
       students: allStudents,
     });
   } catch (error) {
-    console.error('Error fetching students:', error);
-    res.status(500).json({ message: 'Server error, please try again later.' });
+    console.error("Error fetching students:", error);
+    res.status(500).json({ message: "Server error, please try again later." });
   }
 };
 
@@ -189,24 +192,21 @@ const updateStudent = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Student updated successfully",
-      student: updatedStudent
+      student: updatedStudent,
     });
-
   } catch (error) {
     console.error("Error updating student:", error);
     return res.status(500).json({
       message: "Error updating student",
-      error: error.message
+      error: error.message,
     });
   }
 };
-
-
 
 module.exports = {
   addNewStudent,
   getStudent,
   deleteStudent,
   getAllStudents,
-  updateStudent
+  updateStudent,
 };
