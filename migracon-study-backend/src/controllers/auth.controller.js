@@ -59,8 +59,9 @@ const loginAgent = async (req, res) => {
     });
 
     return res.status(200).json({
-      message: "Login success",
       agentId: agent._id,
+      name: `${agent.firstName} ${agent.lastName}`,
+      profilePicture: agent.profilePicture ? agent.profilePicture : null,
       token,
     });
   } catch (error) {
@@ -186,11 +187,10 @@ const googleLogin = async (req, res) => {
     });
 
     return res.status(200).json({
-      message: "Google login success",
       agentId: agent._id,
-      token: jwtToken,
       name: `${agent.firstName} ${agent.lastName}`,
-      profilePicture : agent.profilePicture
+      profilePicture: agent.profilePicture ? agent.profilePicture : null,
+      token: jwtToken,
     });
   } catch (err) {
     console.error("Google login error:", err);

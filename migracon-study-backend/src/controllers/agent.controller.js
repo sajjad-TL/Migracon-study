@@ -1,4 +1,5 @@
 const Agent = require("../models/agent.model");
+const mongoose = require("mongoose");
 
 const updateAgent = async (req, res) => {
   const { agentId, ...updatedValues } = req.body;
@@ -34,6 +35,38 @@ const updateAgent = async (req, res) => {
   }
 };
 
+const getAgent = async (req, res) => {
+  const { agentId } = req.body;
+
+  if (!agentId) {
+    return res.status(400).json({ message: "Agent ID is required" });
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(agentId)) {
+    return res.status(400).json({ message: "Invalid agent ID format" });
+  }
+
+  try {
+    const agent = await Agent.findById(agentId);
+
+    if (!agent) {
+      return res.status(404).json({ message: "Agent not found" });
+    }
+
+    return res.status(200).json({
+      message: "Success",
+      agent: agent,
+    });
+  } catch (error) {
+    console.error("Error fetching agent:", error);
+    return res.status(500).json({
+      message: "Server error. Please try again later.",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   updateAgent,
+  getAgent,
 };

@@ -48,7 +48,7 @@ This is the backend service for the Migracon Study platform. It handles user aut
 | Method | Endpoint             | Description                |
 | ------ | -------------------- | -------------------------- |
 | POST   | `/api/auth/register` | Register a new agent       |
-| POST    | `/api/auth/login`    | Login with email/password  |
+| POST   | `/api/auth/login`    | Login with email/password  |
 | POST   | `/api/auth/google`   | Login using Google OAuth   |
 | POST   | `/api/auth/forgot`   | Request password reset OTP |
 | POST   | `/api/auth/verify`   | Verify OTP                 |
@@ -69,6 +69,7 @@ This is the backend service for the Migracon Study platform. It handles user aut
 | Method | Endpoint        | Description         |
 | ------ | --------------- | ------------------- |
 | PATCH  | `/agent/update` | Updated Agent by ID |
+| GET    | `/agent`        | Get Agent by ID     |
 
 ## License
 
