@@ -1,22 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const {
-  forgotPassword,
-  verifyCode,
-  resetPassword,
-  googleLogin,
-  registerAgent,
-  loginAgent,
-  updateAgent,
-} = require("../controllers/agent.controller");
-const validateRegister = require("../middlewares/validateRegister");
+const { updateAgent } = require("../controllers/agent.controller");
 
-router.post("/register", validateRegister, registerAgent);
-router.get("/login", loginAgent);
-router.post("/forgot-password", forgotPassword);
-router.post("/verify-code", verifyCode);
-router.post("/reset-password", resetPassword);
-router.get("/google-login", googleLogin);
 router.patch("/update", updateAgent);
 
 module.exports = router;
