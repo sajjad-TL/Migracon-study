@@ -1,7 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const { updateAgent } = require("../controllers/agent.controller");
+const { updateAgent, getAgent } = require("../controllers/agent.controller");
 
 router.patch("/update", updateAgent);
+router.get("/", getAgent);
 
 module.exports = router;
