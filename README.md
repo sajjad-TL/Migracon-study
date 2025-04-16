@@ -43,12 +43,12 @@ This is the backend service for the Migracon Study platform. It handles user aut
 
    Server runs on: `http://localhost:5000`
 
-## Agent API Endpoints
+## Authentication API Endpoints
 
 | Method | Endpoint             | Description                |
 | ------ | -------------------- | -------------------------- |
 | POST   | `/api/auth/register` | Register a new agent       |
-| GET    | `/api/auth/login`    | Login with email/password  |
+| POST    | `/api/auth/login`    | Login with email/password  |
 | POST   | `/api/auth/google`   | Login using Google OAuth   |
 | POST   | `/api/auth/forgot`   | Request password reset OTP |
 | POST   | `/api/auth/verify`   | Verify OTP                 |
@@ -63,6 +63,12 @@ This is the backend service for the Migracon Study platform. It handles user aut
 | DELETE | `/api/student/delete`         | Delete a student by ID                |
 | GET    | `/api/student/all-students`   | Get all students for a specific agent |
 | PUT    | `/api/student/update-student` | Update student details by ID          |
+
+## Agent API Endpoints
+
+| Method | Endpoint        | Description         |
+| ------ | --------------- | ------------------- |
+| PATCH  | `/agent/update` | Updated Agent by ID |
 
 ## License
 
