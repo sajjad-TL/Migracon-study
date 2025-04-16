@@ -36,7 +36,7 @@ const updateAgent = async (req, res) => {
 };
 
 const getAgent = async (req, res) => {
-  const { agentId } = req.body;
+  const { agentId } = req.params;
 
   if (!agentId) {
     return res.status(400).json({ message: "Agent ID is required" });
