@@ -1,4 +1,4 @@
-const validator = require('validator');
+const validator = require("validator");
 
 const isValidEmail = (email, confirmEmail) => {
   return validator.isEmail(email) && email === confirmEmail;

@@ -1,34 +1,36 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const User = require("../models/user.model");
+const Agent = require("../models/agent.model");
 const sendEmail = require("../utils/sendEmail"); // Add this utility
 const { OAuth2Client } = require("google-auth-library");
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Register User
-const registerUser = async (req, res) => {
+const registerAgent = async (req, res) => {
   const { firstName, lastName, phone, email, password, consentAccepted } =
     req.body;
 
   try {
-    const existingUser = await User.findOne({ email });
-    if (existingUser) return res.status(400).json({ message: "User already exists" });
+    const existingAgent = await Agent.findOne({ email });
+    if (existingAgent)
+      return res.status(400).json({ message: "Agent already exists" });
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    const newUser = await User.create({
+    const agent = await Agent.create({
       firstName,
       lastName,
       phone,
       email,
       password: hashedPassword,
       consentAccepted,
+      profilePicture: null,
     });
 
     res.status(201).json({
-      message: "User registered successfully",
-      userId: newUser._id,
+      message: "Agent registered successfully",
+      agentId: agent._id,
     });
   } catch (err) {
     console.error(err);
@@ -37,7 +39,7 @@ const registerUser = async (req, res) => {
 };
 
 // Login User
-const loginUser = async (req, res) => {
+const loginAgent = async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -45,19 +47,20 @@ const loginUser = async (req, res) => {
   }
 
   try {
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: "Email not found" });
+    const agent = await Agent.findOne({ email });
+    if (!agent) return res.status(404).json({ message: "Email not found" });
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) return res.status(401).json({ message: "Incorrect password" });
+    const isPasswordValid = await bcrypt.compare(password, agent.password);
+    if (!isPasswordValid)
+      return res.status(401).json({ message: "Incorrect password" });
 
-    const token = jwt.sign({ id: user._id }, process.env.jwt_secret_key, {
+    const token = jwt.sign({ id: agent._id }, process.env.jwt_secret_key, {
       expiresIn: "7d",
     });
 
     return res.status(200).json({
       message: "Login success",
-      userId: user._id,
+      agentId: agent._id,
       token,
     });
   } catch (error) {
@@ -71,19 +74,20 @@ const forgotPassword = async (req, res) => {
   const { email } = req.body;
 
   try {
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: "User not found" });
+    const agent = await Agent.findOne({ email });
+    if (!agent) return res.status(404).json({ message: "Agent not found" });
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const hash = crypto.createHash("sha256").update(otp).digest("hex");
 
-    user.resetPasswordToken = hash;
-    user.resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
-    await user.save();
+    agent.resetPasswordToken = hash;
+    agent.resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+
+    await agent.save();
 
     const emailContent = `<h2>Your password reset code</h2><p><strong>${otp}</strong> is your OTP. It expires in 10 minutes.</p>`;
 
-    await sendEmail(user.email, "Password Reset Code", emailContent);
+    await sendEmail(agent.email, "Password Reset Code", emailContent);
 
     return res.status(200).json({
       message: "OTP has been sent to your email",
@@ -105,13 +109,14 @@ const verifyCode = async (req, res) => {
   const hash = crypto.createHash("sha256").update(code).digest("hex");
 
   try {
-    const user = await User.findOne({
+    const agent = await Agent.findOne({
       email,
       resetPasswordToken: hash,
       resetPasswordExpires: { $gt: Date.now() },
     });
 
-    if (!user) return res.status(400).json({ message: "Invalid or expired code" });
+    if (!agent)
+      return res.status(400).json({ message: "Invalid or expired code" });
 
     return res.status(200).json({ message: "Code verified successfully" });
   } catch (err) {
@@ -131,17 +136,18 @@ const resetPassword = async (req, res) => {
   }
 
   try {
-    const user = await User.findOne({
+    const agent = await Agent.findOne({
       email,
       resetPasswordExpires: { $gt: Date.now() },
     });
 
-    if (!user) return res.status(400).json({ message: "Invalid or expired session" });
+    if (!agent)
+      return res.status(400).json({ message: "Invalid or expired session" });
 
-    user.password = await bcrypt.hash(password, 12);
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
-    await user.save();
+    agent.password = await bcrypt.hash(password, 12);
+    agent.resetPasswordToken = undefined;
+    agent.resetPasswordExpires = undefined;
+    await agent.save();
 
     return res.status(200).json({ message: "Password reset successful" });
   } catch (err) {
@@ -161,10 +167,10 @@ const googleLogin = async (req, res) => {
 
     const { email, given_name, family_name, picture } = ticket.getPayload();
 
-    let user = await User.findOne({ email });
+    let agent = await Agent.findOne({ email });
 
-    if (!user) {
-      user = await User.create({
+    if (!agent) {
+      agent = await Agent.create({
         email,
         firstName: given_name,
         lastName: family_name,
@@ -175,24 +181,26 @@ const googleLogin = async (req, res) => {
       });
     }
 
-    const jwtToken = jwt.sign({ id: user._id }, process.env.jwt_secret_key, {
+    const jwtToken = jwt.sign({ id: agent._id }, process.env.jwt_secret_key, {
       expiresIn: "7d",
     });
 
     return res.status(200).json({
       message: "Google login success",
-      userId: user._id,
+      agentId: agent._id,
       token: jwtToken,
-      name: `${user.firstName} ${user.lastName}`,
+      name: `${agent.firstName} ${agent.lastName}`,
+      profilePicture : agent.profilePicture
     });
   } catch (err) {
     console.error("Google login error:", err);
-    res.status(401).json({ message: err});
+    res.status(401).json({ message: err });
   }
 };
+
 module.exports = {
-  registerUser,
-  loginUser,
+  registerAgent,
+  loginAgent,
   forgotPassword,
   verifyCode,
   resetPassword,
