@@ -1,5 +1,6 @@
 const Agent = require("../models/agent.model");
 const mongoose = require("mongoose");
+const Student = require("../models/student.model");
 
 const updateAgent = async (req, res) => {
   const { agentId, ...updatedValues } = req.body;
@@ -66,7 +67,28 @@ const getAgent = async (req, res) => {
   }
 };
 
+const allStudents = async (req, res) => {
+  const { agentId } = req.params;
+  try {
+    const agent = await Agent.findById(agentId);
+    if (!agent) {
+      return res.status(404).json({ message: "Agent does not exist." });
+    }
+
+    const allStudents = await Student.find({ agentId });
+
+    res.status(200).json({
+      message: "Students fetched successfully",
+      students: allStudents
+    });
+  } catch (error) {
+    console.error("Error fetching students:", error);
+    res.status(500).json({ message: "Server error, please try again later." });
+  }
+};
+
 module.exports = {
   updateAgent,
   getAgent,
+  allStudents,
 };
