@@ -11,23 +11,32 @@ const updateAgent = async (req, res) => {
   }
 
   try {
-    let updatedAgent;
-    if (req.file) {
-      updatedAgent = await Agent.findByIdAndUpdate(
-        agentId,
-        {$set : {profilePicture : req.file.path}},
-        {$set : updatedValues},
-        { new: true , runValidators : true}
-      )
-      updatedValues = {...updatedValues, profilePicture : req.file.path}
-    } else {
-      updatedAgent = await Agent.findByIdAndUpdate(
-      agentId,
-      { $set: updatedValues },
-      { new: true, runValidators: true }
-    );
-    }
+    // let updatedAgent;
+    // if (req.file) {
+    //   updatedAgent = await Agent.findByIdAndUpdate(
+    //     agentId,
+    //     {$set : {profilePicture : req.file.path}},
+    //     {$set : updatedValues},
+    //     { new: true , runValidators : true}
+    //   )
+    //   updatedValues = {...updatedValues, profilePicture : req.file.path}
+    // } else {
+    //   updatedAgent = await Agent.findByIdAndUpdate(
+    //   agentId,
+    //   { $set: updatedValues },
+    //   { new: true, runValidators: true }
+    // );
+    // }
     
+    if(req.file){
+      updatedValues = { ...updatedValues , profilePicture: req.file.path}
+    }
+
+    const updatedAgent = await Agent.findByIdAndUpdate(
+      agentId,
+      {$set : updatedValues},
+      { new : true , runValidators : true}
+    )
 
     if (!updatedAgent) {
       return res.status(404).json({ message: "Agent not found." });

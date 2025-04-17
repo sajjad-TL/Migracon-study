@@ -2,11 +2,13 @@ const express = require("express");
 const cors = require("cors");
 const connectDB = require("./src/config/db");
 require("dotenv").config();
+const path = require('path')
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use('/profilePictures', express.static(path.join(__dirname, 'profilePictures')));
 
 app.use("/api/auth", require("./src/routes/auth.routes"));
 app.use("/student", require("./src/routes/student.routes"));
