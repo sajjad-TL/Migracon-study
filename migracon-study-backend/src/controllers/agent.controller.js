@@ -3,34 +3,46 @@ const mongoose = require("mongoose");
 const Student = require("../models/student.model");
 
 const updateAgent = async (req, res) => {
-  const { agentId, ...updatedValues } = req.body;
-
+  let { agentId, ...updatedValues } = req.body;
   if (!agentId || !updatedValues) {
     return res
       .status(400)
-      .json({ message: "Agent id and values to be updated are required." });
+      .json({ message: "Agent ID and update values are required." });
   }
 
   try {
-    const updatedAgent = await Agent.findByIdAndUpdate(
+    let updatedAgent;
+    if (req.file) {
+      updatedAgent = await Agent.findByIdAndUpdate(
+        agentId,
+        {$set : {profilePicture : req.file.path}},
+        {$set : updatedValues},
+        { new: true , runValidators : true}
+      )
+      updatedValues = {...updatedValues, profilePicture : req.file.path}
+    } else {
+      updatedAgent = await Agent.findByIdAndUpdate(
       agentId,
       { $set: updatedValues },
       { new: true, runValidators: true }
     );
+    }
+    
 
     if (!updatedAgent) {
-      return res.stauts(404).json({ message: "Agent not found." });
+      return res.status(404).json({ message: "Agent not found." });
     }
 
     return res.status(200).json({
       success: true,
       message: "Agent updated successfully.",
+      updatedFields : Object.keys(updatedValues),
       agent: updatedAgent,
     });
   } catch (error) {
-    console.log(error);
+    console.log("Error updating agent:", error);
     return res.status(500).json({
-      message: "Error updating agent. Try again later",
+      message: "Error updating agent. Please try again later.",
       error: error.message,
     });
   }
@@ -79,7 +91,7 @@ const allStudents = async (req, res) => {
 
     res.status(200).json({
       message: "Students fetched successfully",
-      students: allStudents
+      students: allStudents,
     });
   } catch (error) {
     console.error("Error fetching students:", error);
