@@ -3,7 +3,8 @@ const mongoose = require("mongoose");
 const Student = require("../models/student.model");
 
 const updateAgent = async (req, res) => {
-  let { agentId, ...updatedValues } = req.body;
+  let { ...updatedValues } = req.body;
+  const { agentId } = req.params;
   if (!agentId || !updatedValues) {
     return res
       .status(400)
@@ -11,32 +12,15 @@ const updateAgent = async (req, res) => {
   }
 
   try {
-    // let updatedAgent;
-    // if (req.file) {
-    //   updatedAgent = await Agent.findByIdAndUpdate(
-    //     agentId,
-    //     {$set : {profilePicture : req.file.path}},
-    //     {$set : updatedValues},
-    //     { new: true , runValidators : true}
-    //   )
-    //   updatedValues = {...updatedValues, profilePicture : req.file.path}
-    // } else {
-    //   updatedAgent = await Agent.findByIdAndUpdate(
-    //   agentId,
-    //   { $set: updatedValues },
-    //   { new: true, runValidators: true }
-    // );
-    // }
-    
-    if(req.file){
-      updatedValues = { ...updatedValues , profilePicture: req.file.path}
+    if (req.file) {
+      updatedValues = { ...updatedValues, profilePicture: req.file.path };
     }
 
     const updatedAgent = await Agent.findByIdAndUpdate(
       agentId,
-      {$set : updatedValues},
-      { new : true , runValidators : true}
-    )
+      { $set: updatedValues },
+      { new: true, runValidators: true }
+    );
 
     if (!updatedAgent) {
       return res.status(404).json({ message: "Agent not found." });
@@ -45,7 +29,7 @@ const updateAgent = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Agent updated successfully.",
-      updatedFields : Object.keys(updatedValues),
+      updatedFields: Object.keys(updatedValues),
       agent: updatedAgent,
     });
   } catch (error) {

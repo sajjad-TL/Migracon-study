@@ -14,16 +14,16 @@ const storage = multer.diskStorage({
     return cb(null, "profilePictures/");
   },
   filename: function (req, file, cb) {
-    const customName = `image_${
-      req.body.agentId ? req.body.agentId : Date.now()
-    }${path.extname(file.originalname)}`;
+    const customName = `${
+      req.params.agentId ? req.params.agentId : Date.now()
+    }_image${path.extname(file.originalname)}`;
     return cb(null, customName);
   },
 });
 
 const upload = multer({ storage });
 
-router.patch("/update", upload.single("profilePicture"), updateAgent);
+router.patch("/update/:agentId", upload.single("profilePicture"), updateAgent);
 router.get("/:agentId", getAgent);
 router.get("/all-students/:agentId", allStudents);
 
