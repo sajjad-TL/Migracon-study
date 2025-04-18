@@ -54,7 +54,7 @@ const loginAgent = async (req, res) => {
     if (!isPasswordValid)
       return res.status(401).json({ message: "Incorrect password" });
 
-    const token = jwt.sign({ id: agent._id }, process.env.jwt_secret_key, {
+    const token = jwt.sign({ agentId: agent._id }, process.env.jwt_secret_key, {
       expiresIn: "7d",
     });
 
@@ -182,7 +182,7 @@ const googleLogin = async (req, res) => {
       });
     }
 
-    const jwtToken = jwt.sign({ id: agent._id }, process.env.jwt_secret_key, {
+    const jwtToken = jwt.sign({ agentId: agent._id }, process.env.jwt_secret_key, {
       expiresIn: "7d",
     });
 

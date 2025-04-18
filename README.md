@@ -56,21 +56,27 @@ This is the backend service for the Migracon Study platform. It handles user aut
 
 ## 📚 Student API Endpoints
 
-| Method | Endpoint                      | Description                           |
-| ------ | ----------------------------- | ------------------------------------- |
-| POST   | `/api/student/add-new`        | Add a new student                     |
-| GET    | `/api/student/get`            | Get student by email, ID or passport  |
-| DELETE | `/api/student/delete`         | Delete a student by ID                |
-| GET    | `/api/student/all-students`   | Get all students for a specific agent |
-| PUT    | `/api/student/update-student` | Update student details by ID          |
+| Method | Endpoint                  | Description                  |
+| ------ | ------------------------- | ---------------------------- |
+| POST   | `/student/add-new`        | Add a new student            |
+| GET    | `/student/:studentId`     | Get student ID               |
+| DELETE | `/student/delete`         | Delete a student by ID       |
+| PUT    | `/student/update-student` | Update student details by ID |
 
 ## Agent API Endpoints
 
-| Method | Endpoint        | Description         |
-| ------ | --------------- | ------------------- |
-| PATCH  | `/agent/update` | Updated Agent by ID |
-| GET    | `/agent`        | Get Agent by ID     |
+| Method | Endpoint                       | Description                           |
+| ------ | ------------------------------ | ------------------------------------- |
+| PATCH  | `/agent/update`                | Updated Agent by ID                   |
+| GET    | `/:agentId`                    | Get Agent by ID                       |
+| GET    | `/agent/all-students/:agentId` | Get all students for a specific agent |
 
 ## License
 
 MIT – feel free to use and modify.
+
+
+Google Login Image - ✅
+Google Login update image  - ✅ 
+New User default image  - ✅
+Update User Image - ✅

@@ -82,29 +82,16 @@ const addNewStudent = async (req, res) => {
 };
 
 const getStudent = async (req, res) => {
-  const { passportNumber, studentId, email } = req.body;
+  const { studentId } = req.params;
 
-  if (!passportNumber && !studentId && !email) {
+  if (!studentId) {
     return res.status(400).json({
-      message:
-        "Please provide at least one of: passport number, student ID, or email",
+      message: "Please provide student ID",
     });
   }
 
   try {
-    const queryConditions = [];
-
-    if (email) queryConditions.push({ email });
-    if (passportNumber) queryConditions.push({ passportNumber });
-    if (studentId && mongoose.Types.ObjectId.isValid(studentId)) {
-      queryConditions.push({ _id: studentId });
-    }
-
-    if (queryConditions.length === 0) {
-      return res.status(400).json({ message: "Invalid input provided." });
-    }
-
-    const student = await Student.findOne({ $or: queryConditions });
+    const student = await Student.findOne({ _id: studentId });
 
     if (!student) {
       return res
@@ -150,27 +137,6 @@ const deleteStudent = async (req, res) => {
   }
 };
 
-const getAllStudents = async (req, res) => {
-  const { agentId } = req.body;
-
-  try {
-    const agent = await Agent.findById(agentId);
-    if (!agent) {
-      return res.status(404).json({ message: "Agent does not exist." });
-    }
-
-    const allStudents = await Student.find({ agentId });
-
-    res.status(200).json({
-      message: "Students fetched successfully",
-      students: allStudents,
-    });
-  } catch (error) {
-    console.error("Error fetching students:", error);
-    res.status(500).json({ message: "Server error, please try again later." });
-  }
-};
-
 const updateStudent = async (req, res) => {
   const { studentId, ...updatedValues } = req.body;
 
@@ -207,6 +173,5 @@ module.exports = {
   addNewStudent,
   getStudent,
   deleteStudent,
-  getAllStudents,
   updateStudent,
 };
