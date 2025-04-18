@@ -23,6 +23,19 @@ const studentSchema = new mongoose.Schema(
     serviceOfInterest: { type: String },
     conditionsAccepted: { type: Boolean, required: true },
     agentId: { type: mongoose.Schema.Types.ObjectId, ref: "Agent" },
+    applications: [
+      {
+        paymentDate: { type: Date },
+        applicationId: { type: String },
+        applyDate: { type: Date },
+        program: { type: String },
+        institute: { type: String },
+        startDate: { type: Date },
+        status: { type: String },
+        requirements: { type: String },
+        currentStage: { type: String },
+      },
+    ],
   },
   { timestamps: true }
 );

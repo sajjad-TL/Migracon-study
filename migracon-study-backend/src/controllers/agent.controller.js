@@ -24,17 +24,21 @@ const updateAgent = async (req, res) => {
       agentId,
       { $set: updatedValues },
       { new: true, runValidators: true }
-    );
+    ).lean();
 
     if (!updatedAgent) {
       return res.status(404).json({ message: "Agent not found." });
     }
 
+    const { _id , ...restObj } = updatedAgent
     return res.status(200).json({
       success: true,
       message: "Agent updated successfully.",
       updatedFields: Object.keys(updatedValues),
-      agent: updatedAgent,
+      agent: {
+        agentId : _id,
+        ...restObj
+      },
     });
   } catch (error) {
     console.log("Error updating agent:", error);
@@ -57,15 +61,19 @@ const getAgent = async (req, res) => {
   }
 
   try {
-    const agent = await Agent.findById(agentId);
+    const existingAgent = await Agent.findById(agentId).lean();
 
-    if (!agent) {
+    if (!existingAgent) {
       return res.status(404).json({ message: "Agent not found" });
     }
 
+    const { _id , ...restObj } = existingAgent
     return res.status(200).json({
       message: "Success",
-      agent: agent,
+      agent : {
+        agentId : _id,
+        ...restObj
+      }
     });
   } catch (error) {
     console.error("Error fetching agent:", error);
