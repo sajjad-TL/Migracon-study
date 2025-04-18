@@ -4,8 +4,10 @@ const Student = require("../models/student.model");
 
 const updateAgent = async (req, res) => {
   let { ...updatedValues } = req.body;
-  const { agentId } = req.params;
-  if (!agentId || !updatedValues) {
+  const agentId = req.params.agentId
+  console.log('Agent id: ', agentId)
+  console.log('Values: ', updatedValues)
+  if ( !agentId || !updatedValues) {
     return res
       .status(400)
       .json({ message: "Agent ID and update values are required." });
@@ -13,8 +15,10 @@ const updateAgent = async (req, res) => {
 
   try {
     if (req.file) {
-      updatedValues = { ...updatedValues, profilePicture: req.file.path };
+      const fullUrl = `http://localhost:5000/${req.file.path.replace(/\\/g, "/")}`;
+      updatedValues = { ...updatedValues, profilePicture: fullUrl };
     }
+    
 
     const updatedAgent = await Agent.findByIdAndUpdate(
       agentId,
