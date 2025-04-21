@@ -56,12 +56,13 @@ This is the backend service for the Migracon Study platform. It handles user aut
 
 ## 📚 Student API Endpoints
 
-| Method | Endpoint                  | Description                  |
-| ------ | ------------------------- | ---------------------------- |
-| POST   | `/student/add-new`        | Add a new student            |
-| GET    | `/student/:studentId`     | Get student ID               |
-| DELETE | `/student/delete`         | Delete a student by ID       |
-| PUT    | `/student/update-student` | Update student details by ID |
+| Method | Endpoint                              | Description                  |
+| ------ | ------------------------------------- | ---------------------------- |
+| POST   | `/student/add-new`                    | Add a new student            |
+| GET    | `/student/:studentId`                 | Get student ID               |
+| DELETE | `/student/delete`                     | Delete a student by ID       |
+| PUT    | `/student/update-student`             | Update student details by ID |
+| Post   | `/student/:studentId/new-application` | Create a new application     |
 
 ## Agent API Endpoints
 
@@ -75,8 +76,7 @@ This is the backend service for the Migracon Study platform. It handles user aut
 
 MIT – feel free to use and modify.
 
-
 Google Login Image - ✅
-Google Login update image  - ✅ 
-New User default image  - ✅
+Google Login update image - ✅
+New User default image - ✅
 Update User Image - ✅
