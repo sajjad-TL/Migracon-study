@@ -75,8 +75,3 @@ This is the backend service for the Migracon Study platform. It handles user aut
 ## License
 
 MIT – feel free to use and modify.
-
-Google Login Image - ✅
-Google Login update image - ✅
-New User default image - ✅
-Update User Image - ✅
