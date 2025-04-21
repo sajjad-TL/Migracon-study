@@ -169,9 +169,83 @@ const updateStudent = async (req, res) => {
   }
 };
 
+const newApplication = async (req, res) => {
+  const studentId = req.params.studentId;
+  const {
+    paymentDate,
+    applyDate,
+    program,
+    institute,
+    startDate,
+    status,
+    requirements,
+    currentStage,
+  } = req.body;
+
+  if (
+    !paymentDate ||
+    !applyDate ||
+    !program ||
+    !institute ||
+    !startDate ||
+    !status ||
+    !requirements ||
+    !currentStage
+  ) {
+    return res.status(400).json({
+      message: "All fields are required",
+    });
+  }
+
+  try {
+    const student = await Student.findById({ _id: studentId }).select("applications");
+
+    if (!student) {
+      return res.status(404).json({ message: "Student does not exist" });
+    }
+
+    const isDuplicate = student.applications.some((app) => 
+      app.program === program &&
+      app.institute === institute &&
+      new Date(app.startDate).toISOString() === new Date(startDate).toISOString()
+    );
+
+    if (isDuplicate) {
+      return res.status(409).json({ message: "Duplicate application detected" });
+    }
+
+    const generateApplicationId = () => {
+      return Math.floor(100000 + Math.random() * 900000).toString();
+    };
+
+    const newApp = {
+      paymentDate,
+      applicationId: generateApplicationId(),
+      applyDate,
+      program,
+      institute,
+      startDate,
+      status,
+      requirements,
+      currentStage,
+    };
+
+    student.applications.push(newApp);
+    student.applicationCount = student.applications.length;
+    await student.save();
+
+    return res.status(200).json({ message: "New application added successfully" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: error, error: error.message });
+  }
+};
+
+
 module.exports = {
   addNewStudent,
   getStudent,
   deleteStudent,
   updateStudent,
+  newApplication,
 };
