@@ -36,6 +36,7 @@ const studentSchema = new mongoose.Schema(
         currentStage: { type: String },
       },
     ],
+    applicationCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

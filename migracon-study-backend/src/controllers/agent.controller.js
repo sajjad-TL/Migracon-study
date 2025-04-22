@@ -5,8 +5,6 @@ const Student = require("../models/student.model");
 const updateAgent = async (req, res) => {
   let { ...updatedValues } = req.body;
   const agentId = req.params.agentId
-  console.log('Agent id: ', agentId)
-  console.log('Values: ', updatedValues)
   if ( !agentId || !updatedValues) {
     return res
       .status(400)
