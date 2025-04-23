@@ -15,7 +15,6 @@ router.delete("/delete", deleteStudent);
 router.patch("/update-student", updateStudent);
 
 router.post('/:studentId/new-application', newApplication);
-router.get("/:studentId", getStudent); 
-
+router.get("/:studentId", getStudent);
 
 module.exports = router;

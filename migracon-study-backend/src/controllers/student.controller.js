@@ -254,7 +254,8 @@ const getAllApplications = async (req, res) => {
     students.forEach((student) => {
       student.applications.forEach((app) => {
         allApplications.push({
-          studentName: `${student.firstName} ${student.lastName}`,
+          firstName: student.firstName,
+          lastName: student.lastName,
           studentEmail: student.email,
           studentId: student._id,
           requirementspartner: app.requirementspartner,
