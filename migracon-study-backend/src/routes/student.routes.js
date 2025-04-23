@@ -6,7 +6,6 @@ const {
   deleteStudent,
   updateStudent,
   newApplication,
-  getApplications,
   getAllApplications
 } = require("../controllers/student.controller");
 
@@ -15,10 +14,8 @@ router.post("/add-new", addNewStudent);
 router.delete("/delete", deleteStudent);
 router.patch("/update-student", updateStudent);
 
-// 👇 move this after all static routes
-router.get("/:studentId/getApplications", getApplications);
 router.post('/:studentId/new-application', newApplication);
-router.get("/:studentId", getStudent); // 👈 keep this at the very end
+router.get("/:studentId", getStudent); 
 
 
 module.exports = router;

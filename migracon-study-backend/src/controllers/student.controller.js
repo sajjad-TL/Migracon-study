@@ -242,35 +242,6 @@ const newApplication = async (req, res) => {
 };
 
 
-const getApplications = async (req, res) => {
-  const { studentId } = req.params;
-
-  if (!studentId || !mongoose.Types.ObjectId.isValid(studentId)) {
-    return res.status(400).json({ message: "Valid student ID is required" });
-  }
-
-  try {
-    const student = await Student.findById(studentId).select("applications");
-
-    if (!student) {
-      return res.status(404).json({ message: "Student not found" });
-    }
-
-    return res.status(200).json({
-      success: true,
-      applications: student.applications,
-    });
-  } catch (error) {
-    console.error("Error fetching applications:", error);
-    return res.status(500).json({
-      message: "Error fetching applications",
-      error: error.message,
-    });
-  }
-};
-
-
-
 const getAllApplications = async (req, res) => {
   try {
     const students = await Student.find().select("firstName lastName email applications");
@@ -283,7 +254,7 @@ const getAllApplications = async (req, res) => {
           studentName: `${student.firstName} ${student.lastName}`,
           studentEmail: student.email,
           studentId: student._id,
-          ...app,
+          ...app.toObject(), // Convert Mongoose subdocument to plain object
         });
       });
     });
@@ -304,12 +275,12 @@ const getAllApplications = async (req, res) => {
 
 
 
+
 module.exports = {
   addNewStudent,
   getStudent,
   deleteStudent,
   updateStudent,
   newApplication,
-  getApplications,
-  getAllApplications  // ← Add this
+  getAllApplications 
 };
