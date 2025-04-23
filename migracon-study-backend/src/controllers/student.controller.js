@@ -179,6 +179,7 @@ const newApplication = async (req, res) => {
     startDate,
     status,
     requirements,
+    requirementspartner,
     currentStage,
   } = req.body;
 
@@ -190,7 +191,8 @@ const newApplication = async (req, res) => {
     !startDate ||
     !status ||
     !requirements ||
-    !currentStage
+    !currentStage||
+    !requirementspartner
   ) {
     return res.status(400).json({
       message: "All fields are required",
@@ -228,6 +230,7 @@ const newApplication = async (req, res) => {
       status,
       requirements,
       currentStage,
+      requirementspartner,
     };
 
     student.applications.push(newApp);
@@ -255,7 +258,7 @@ const getAllApplications = async (req, res) => {
           lastName: student.lastName,
           studentEmail: student.email,
           studentId: student._id,
-          ...app.toObject(), 
+          ...app.toObject(),
         });
       });
     });
