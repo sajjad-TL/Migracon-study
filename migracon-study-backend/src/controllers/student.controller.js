@@ -271,11 +271,45 @@ const getApplications = async (req, res) => {
 
 
 
+const getAllApplications = async (req, res) => {
+  try {
+    const students = await Student.find().select("firstName lastName email applications");
+
+    const allApplications = [];
+
+    students.forEach((student) => {
+      student.applications.forEach((app) => {
+        allApplications.push({
+          studentName: `${student.firstName} ${student.lastName}`,
+          studentEmail: student.email,
+          studentId: student._id,
+          ...app,
+        });
+      });
+    });
+
+    return res.status(200).json({
+      success: true,
+      applications: allApplications,
+    });
+  } catch (error) {
+    console.error("Error fetching all applications:", error);
+    return res.status(500).json({
+      message: "Error fetching all applications",
+      error: error.message,
+    });
+  }
+};
+
+
+
+
 module.exports = {
   addNewStudent,
   getStudent,
   deleteStudent,
   updateStudent,
   newApplication,
-  getApplications
+  getApplications,
+  getAllApplications  // ← Add this
 };
