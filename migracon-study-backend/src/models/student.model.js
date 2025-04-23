@@ -34,6 +34,7 @@ const studentSchema = new mongoose.Schema(
         status: { type: String },
         requirements: { type: String },
         currentStage: { type: String },
+        requirementspartner : { type: String },
       },
     ],
     applicationCount: { type: Number, default: 0 },

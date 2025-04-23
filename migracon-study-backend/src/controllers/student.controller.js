@@ -257,6 +257,7 @@ const getAllApplications = async (req, res) => {
           studentName: `${student.firstName} ${student.lastName}`,
           studentEmail: student.email,
           studentId: student._id,
+          requirementspartner: app.requirementspartner,
           ...app.toObject(),
         });
       });
