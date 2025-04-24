@@ -1,6 +1,5 @@
 const Student = require("../models/student.model");
 const mongoose = require("mongoose");
-const Agent = require("../models/agent.model");
 
 const addNewStudent = async (req, res) => {
   const {
@@ -138,36 +137,64 @@ const deleteStudent = async (req, res) => {
 };
 
 const updateStudent = async (req, res) => {
-  const { studentId, ...updatedValues } = req.body;
+  const { studentId, updatedApplication } = req.body;
 
-  if (!studentId) {
-    return res.status(400).json({ message: "Student ID is required" });
+  if (!studentId ) {
+    return res.status(400).json({ message: "Student ID are required" });
+  }
+  else if (!updatedApplication?.applicationId) {
+    return res.status(400).json({ message: "Application ID are required" });
   }
 
   try {
-    const updatedStudent = await Student.findByIdAndUpdate(
-      studentId,
-      { $set: updatedValues },
-      { new: true, runValidators: true }
-    );
+    // Find the student by studentId
+    const student = await Student.findById(studentId);
 
-    if (!updatedStudent) {
+    if (!student) {
       return res.status(404).json({ message: "Student not found" });
     }
 
+    // Find the application by applicationId
+    const appIndex = student.applications.findIndex(
+      (app) => app.applicationId === updatedApplication.applicationId
+    );
+
+    if (appIndex === -1) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    // Update the application fields if provided in the request
+    const appToUpdate = student.applications[appIndex];
+    
+    // Ensure only the fields that are in updatedApplication are modified
+    if (updatedApplication.program) appToUpdate.program = updatedApplication.program;
+    if (updatedApplication.institute) appToUpdate.institute = updatedApplication.institute;
+    if (updatedApplication.startDate) appToUpdate.startDate = updatedApplication.startDate;
+    if (updatedApplication.status) appToUpdate.status = updatedApplication.status;
+    if (updatedApplication.requirements) appToUpdate.requirements = updatedApplication.requirements;
+    if (updatedApplication.currentStage) appToUpdate.currentStage = updatedApplication.currentStage;
+
+    // Save the updated student document
+    await student.save();
+
+    // Return the updated student data
     return res.status(200).json({
       success: true,
-      message: "Student updated successfully",
-      student: updatedStudent,
+      message: "Student and/or application updated successfully",
+      student,
     });
+
   } catch (error) {
-    console.error("Error updating student:", error);
+    console.error("Error updating student and application:", error);
     return res.status(500).json({
-      message: "Error updating student",
+      message: "Error updating student and application",
       error: error.message,
     });
   }
 };
+
+
+
 
 const newApplication = async (req, res) => {
   const studentId = req.params.studentId;
@@ -286,5 +313,8 @@ module.exports = {
   deleteStudent,
   updateStudent,
   newApplication,
-  getAllApplications 
+  getAllApplications,
+
 };
+
+// http://localhost:5000/student/update-student

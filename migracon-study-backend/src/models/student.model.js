@@ -33,6 +33,7 @@ const studentSchema = new mongoose.Schema(
         startDate: { type: Date },
         status: { type: String },
         requirements: { type: String },
+        requirementspartner: { type: String },
         currentStage: { type: String },
       },
     ],

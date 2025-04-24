@@ -6,7 +6,8 @@ const {
   deleteStudent,
   updateStudent,
   newApplication,
-  getAllApplications
+  getAllApplications,
+
 } = require("../controllers/student.controller");
 
 router.get("/getAllApplications", getAllApplications);
