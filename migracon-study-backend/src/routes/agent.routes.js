@@ -10,15 +10,13 @@ const path = require("path");
 const multer = require("multer");
 
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
+  destination: function (cb) {
     return cb(null, "profilePictures/");
   },
   filename: function (req, file, cb) {
     const extension = path.extname(file.originalname)
-    const customName = `${
-      // req.params.agentId }-${Date.now()}${path.extname(file.originalname)}`;
-      req.params.agentId ? req.params.agentId : Date.now()
-    }_image${extension}`;
+    const customName = `${req.params.agentId ? req.params.agentId : Date.now()
+      }_image${extension}`;
     return cb(null, customName);
   },
 });

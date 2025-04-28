@@ -5,7 +5,7 @@ const Student = require("../models/student.model");
 const updateAgent = async (req, res) => {
   let { ...updatedValues } = req.body;
   const agentId = req.params.agentId
-  if ( !agentId || !updatedValues) {
+  if (!agentId || !updatedValues) {
     return res
       .status(400)
       .json({ message: "Agent ID and update values are required." });
@@ -16,7 +16,7 @@ const updateAgent = async (req, res) => {
       const fullUrl = `http://localhost:5000/${req.file.path.replace(/\\/g, "/")}`;
       updatedValues = { ...updatedValues, profilePicture: fullUrl };
     }
-    
+
 
     const updatedAgent = await Agent.findByIdAndUpdate(
       agentId,
@@ -28,13 +28,13 @@ const updateAgent = async (req, res) => {
       return res.status(404).json({ message: "Agent not found." });
     }
 
-    const { _id , ...restObj } = updatedAgent
+    const { _id, ...restObj } = updatedAgent
     return res.status(200).json({
       success: true,
       message: "Agent updated successfully.",
       updatedFields: Object.keys(updatedValues),
       agent: {
-        agentId : _id,
+        agentId: _id,
         ...restObj
       },
     });
@@ -65,11 +65,11 @@ const getAgent = async (req, res) => {
       return res.status(404).json({ message: "Agent not found" });
     }
 
-    const { _id , ...restObj } = existingAgent
+    const { _id, ...restObj } = existingAgent
     return res.status(200).json({
       message: "Success",
-      agent : {
-        agentId : _id,
+      agent: {
+        agentId: _id,
         ...restObj
       }
     });

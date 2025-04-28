@@ -194,7 +194,7 @@ const newApplication = async (req, res) => {
     !startDate ||
     !status ||
     !requirements ||
-    !currentStage||
+    !currentStage ||
     !requirementspartner
   ) {
     return res.status(400).json({
@@ -209,7 +209,7 @@ const newApplication = async (req, res) => {
       return res.status(404).json({ message: "Student does not exist" });
     }
 
-    const isDuplicate = student.applications.some((app) => 
+    const isDuplicate = student.applications.some((app) =>
       app.program === program &&
       app.institute === institute &&
       new Date(app.startDate).toISOString() === new Date(startDate).toISOString()
