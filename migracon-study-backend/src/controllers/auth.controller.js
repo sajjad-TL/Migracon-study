@@ -6,7 +6,7 @@ const sendEmail = require("../utils/sendEmail");
 const { OAuth2Client } = require("google-auth-library");
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// Register User
+// Register Agent
 const registerAgent = async (req, res) => {
   const { firstName, lastName, phone, email, password, consentAccepted } =
     req.body;
@@ -38,7 +38,7 @@ const registerAgent = async (req, res) => {
   }
 };
 
-// Login User
+// Login Agent
 const loginAgent = async (req, res) => {
   const { email, password } = req.body;
 
@@ -61,7 +61,7 @@ const loginAgent = async (req, res) => {
     return res.status(200).json({
       agentId: agent._id,
       name: `${agent.firstName} ${agent.lastName}`,
-      profilePicture: agent.profilePicture ? agent.profilePicture : null,
+      profilePicture: agent.profilePicture || null,
       token,
     });
   } catch (error) {
@@ -88,10 +88,13 @@ const forgotPassword = async (req, res) => {
 
     const emailContent = `<h2>Your password reset code</h2><p><strong>${otp}</strong> is your OTP. It expires in 10 minutes.</p>`;
 
-    await sendEmail(agent.email, "Password Reset Code", emailContent);
+    // Send email in background
+    sendEmail(agent.email, "Password Reset Code", emailContent)
+      .then(() => console.log("OTP email sent"))
+      .catch(err => console.error("Failed to send OTP email", err));
 
     return res.status(200).json({
-      message: "OTP has been sent to your email",
+      message: "OTP has been generated and is being sent to your email.",
     });
   } catch (err) {
     console.error(err);
@@ -157,6 +160,7 @@ const resetPassword = async (req, res) => {
   }
 };
 
+// Google Login
 const googleLogin = async (req, res) => {
   const { token } = req.body;
 
@@ -189,7 +193,7 @@ const googleLogin = async (req, res) => {
     return res.status(200).json({
       agentId: agent._id,
       name: `${agent.firstName} ${agent.lastName}`,
-      profilePicture: agent.profilePicture ? agent.profilePicture : null,
+      profilePicture: agent.profilePicture || null,
       token: jwtToken,
     });
   } catch (err) {
