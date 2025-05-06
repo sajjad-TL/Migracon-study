@@ -13,6 +13,7 @@ app.use('/profilePictures', express.static(path.join(__dirname, 'profilePictures
 app.use("/api/auth", require("./src/routes/auth.routes"));
 app.use("/student", require("./src/routes/student.routes"));
 app.use("/agent", require("./src/routes/agent.routes"));
+app.use("/notification", require("./src/routes/notificationPreferences.routes"));
 
 connectDB();
 const PORT = process.env.PORT || 5000;

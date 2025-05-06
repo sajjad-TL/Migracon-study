@@ -82,7 +82,7 @@ const forgotPassword = async (req, res) => {
     const hash = crypto.createHash("sha256").update(otp).digest("hex");
 
     agent.resetPasswordToken = hash;
-    agent.resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+    agent.resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000); 
 
     await agent.save();
 
