@@ -1,9 +1,14 @@
-// routes/notificationPreferences.routes.js
 const express = require("express");
 const router = express.Router();
-const { saveNotificationPreferences } = require("../controllers/notificationPreferencesController");
+const {
+  saveNotificationPreferences,
+  getNotificationPreferences,
+} = require("../controllers/notificationPreferencesController");
 
-// Route to handle saving notification preferences
+// POST: Save preferences
 router.post("/notification-preferences", saveNotificationPreferences);
+
+// GET: Preferences + Count by userId (unified)
+router.get("/notification-preferences/:userId", getNotificationPreferences);
 
 module.exports = router;

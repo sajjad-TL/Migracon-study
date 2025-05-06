@@ -1,14 +1,13 @@
 const NotificationPreference = require("../models/NotificationPreference");
 const nodemailer = require("nodemailer");
-const User = require("../models/agent.model");  // Import the User model
-require("dotenv").config();  // To load environment variables
+const User = require("../models/agent.model"); // Agent model
+require("dotenv").config();
 
-// Controller function to save notification preferences
+// POST: Save Preferences
 const saveNotificationPreferences = async (req, res) => {
   const { userId, notificationType, emailFrequency, mobileNotifications } = req.body;
 
   try {
-    // Save the preferences to the database
     const newPreference = new NotificationPreference({
       userId,
       notificationType,
@@ -17,7 +16,6 @@ const saveNotificationPreferences = async (req, res) => {
     });
     await newPreference.save();
 
-    // Handle sending email notifications based on preferences
     if (emailFrequency !== "Never") {
       sendEmailNotification(userId, notificationType, emailFrequency);
     }
@@ -29,16 +27,29 @@ const saveNotificationPreferences = async (req, res) => {
   }
 };
 
-// Function to send an email notification
+// GET: Retrieve Preferences & Count by User ID (Unified)
+const getNotificationPreferences = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const preferences = await NotificationPreference.find({ userId });
+    const count = preferences.length;
+
+    res.status(200).json({
+      count,
+      preferences,
+    });
+  } catch (error) {
+    console.error("Error fetching preferences:", error);
+    res.status(500).json({ error: "Failed to fetch preferences and count" });
+  }
+};
+
+// Send email notification
 const sendEmailNotification = async (userId, notificationType, frequency) => {
   try {
-    // Fetch user email from the database based on userId
-    const user = await User.findById(userId);  // Fetch user from DB
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    const userEmail = user.email;
+    const user = await User.findById(userId);
+    if (!user) throw new Error("User not found");
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -50,7 +61,7 @@ const sendEmailNotification = async (userId, notificationType, frequency) => {
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
-      to: userEmail, // Dynamically sending email to the user
+      to: user.email,
       subject: `Notification: ${notificationType}`,
       text: `You have a new ${notificationType} notification. Frequency: ${frequency}`,
     };
@@ -62,4 +73,7 @@ const sendEmailNotification = async (userId, notificationType, frequency) => {
   }
 };
 
-module.exports = { saveNotificationPreferences };
+module.exports = {
+  saveNotificationPreferences,
+  getNotificationPreferences,
+};
