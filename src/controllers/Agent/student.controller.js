@@ -108,6 +108,30 @@ const getStudent = async (req, res) => {
   }
 };
 
+const getAllStudents = async (req, res) => {
+  try {
+    const students = await Student.find().sort({ createdAt: -1 }); // Most recent students first
+
+    if (!students || students.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No students found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      students,
+    });
+  } catch (error) {
+    console.error("Error fetching all students:", error);
+    return res.status(502).json({
+      message: "Error fetching students",
+      error: error.message,
+    });
+  }
+};
+
 const deleteStudent = async (req, res) => {
   const { studentId } = req.body;
 
@@ -151,7 +175,7 @@ const updateStudent = async (req, res) => {
     );
 
     if (!updatedStudent) {
-      return res.status(404).json({ message: "Student not found" });
+      return res.status(410).json({ message: "Student not found" });
     }
 
     return res.status(200).json({
@@ -280,7 +304,6 @@ const getAllApplications = async (req, res) => {
   }
 };
 
-
 module.exports = {
   addNewStudent,
   getStudent,
@@ -288,5 +311,5 @@ module.exports = {
   updateStudent,
   newApplication,
   getAllApplications,
-
+  getAllStudents
 };

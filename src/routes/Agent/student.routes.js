@@ -7,6 +7,7 @@ const {
   updateStudent,
   newApplication,
   getAllApplications,
+  getAllStudents,
 
 } = require("../../controllers/Agent/student.controller");
 
@@ -16,6 +17,8 @@ router.delete("/delete", deleteStudent);
 router.patch("/update-student", updateStudent);
 
 router.post('/:studentId/new-application', newApplication);
+router.get("/getAllStudents", getAllStudents); // ✅ New route
+
 router.get("/:studentId", getStudent);
 
 module.exports = router;
