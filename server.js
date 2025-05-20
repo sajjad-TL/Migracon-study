@@ -36,27 +36,20 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// --- MIDDLEWARE ---
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use('/profilePictures', express.static(path.join(__dirname, 'profilePictures')));
 
-// --- DATABASE CONNECTION ---
 const connectDB = require("./src/config/Agent/db");
 connectDB();
-// connectOtherDB(); // Uncomment if multiple DBs
 
-// --- ROUTES (MERGED) ---
-
-// Agent Module
 app.use("/api/other-auth", require("./src/routes/Agent/auth.routes"));
 app.use("/student", require("./src/routes/Agent/student.routes"));
 app.use("/agent", require("./src/routes/Agent/agent.routes"));
 app.use("/notification", require("./src/routes/Agent/notificationPreferences.routes"));
 
-// Other Routes (like Password & Auth for other roles)
 app.use("/api/password", require("./src/routes/SuperAdmin/passwordRoutes"));
-app.use("/api/auth", require("./src/routes/SuperAdmin/authRoutes")); // renamed to avoid duplicate path
+app.use("/api/auth", require("./src/routes/SuperAdmin/authRoutes"));
 
 // --- SERVER ---
 const PORT = process.env.PORT || 5000;

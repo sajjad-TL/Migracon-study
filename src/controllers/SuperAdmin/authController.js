@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Admin = require('../../models/SuperAdmin/Admin');
+const Agent = require('../../models/Agent/agent.model');
 
 // LOGIN ADMIN
 const loginAdmin = async (req, res) => {
@@ -80,6 +81,55 @@ const updateAdmin = async (req, res) => {
     console.error("Update error:", error);
     res.status(500).json({ message: "Server error" });
   }
+
 };
 
-module.exports = { loginAdmin, updateAdmin };
+  const createAgent = async (req, res) => {
+  try {
+    const {
+      firstName,
+      lastName,
+      phone,
+      email,
+      confirmEmail,
+      password,
+      consentAccepted,
+      profilePicture,
+      resetPasswordToken,
+      resetPasswordExpires
+    } = req.body;
+
+    if (email !== confirmEmail) {
+      return res.status(400).json({ message: 'Emails do not match' });
+    }
+
+    const existingAgent = await Agent.findOne({ email });
+    if (existingAgent) {
+      return res.status(409).json({ message: 'Agent with this email already exists' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newAgent = new Agent({
+      firstName,
+      lastName,
+      phone,
+      email,
+      password: hashedPassword,
+      consentAccepted,
+      profilePicture,
+      resetPasswordToken,
+      resetPasswordExpires
+    });
+
+    await newAgent.save();
+
+    res.status(201).json({ message: 'Agent created successfully', agent: newAgent });
+
+  } catch (error) {
+    console.error('Error creating agent:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+module.exports = { loginAdmin, updateAdmin, createAgent };
