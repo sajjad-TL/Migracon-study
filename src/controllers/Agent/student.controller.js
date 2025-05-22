@@ -1,6 +1,7 @@
 const Student = require("../../models/Agent/student.model");
 const mongoose = require("mongoose");
 
+// Add a new student
 const addNewStudent = async (req, res) => {
   const {
     firstName,
@@ -19,7 +20,6 @@ const addNewStudent = async (req, res) => {
     serviceOfInterest,
     conditionsAccepted,
     agentId,
-    
   } = req.body;
 
   if (
@@ -31,26 +31,26 @@ const addNewStudent = async (req, res) => {
     !gender ||
     !email ||
     !phoneNumber ||
-    !conditionsAccepted ||
-    !citizenOf
+    !citizenOf ||
+    !conditionsAccepted
   ) {
     return res.status(400).json({
       message:
-        "First name , last name, date of birth, passport number , passport expiry date , gender , email, phone number , citizenship  required and conditions must be accepted",
+        "Missing required fields: first name, last name, DOB, passport number, expiry date, gender, email, phone number, citizenship, and conditions acceptance.",
     });
   }
-if (!agentId) {
-    return res.status(400).json({
-      message: "Agent ID is required",
-    });
+
+  if (!mongoose.Types.ObjectId.isValid(new mongoose.Types.ObjectId(agentId))) {
+    return res.status(400).json({ message: "Valid Agent ID is required" });
   }
+
   try {
-    const existingStudent = await Student.findOne({
+    const existing = await Student.findOne({
       $or: [{ email }, { passportNumber }],
     });
 
-    if (existingStudent) {
-      return res.status(400).json({ message: "Student already exists" });
+    if (existing) {
+      return res.status(409).json({ message: "Student already exists" });
     }
 
     const student = await Student.create({
@@ -69,142 +69,98 @@ if (!agentId) {
       countryOfInterest,
       serviceOfInterest,
       conditionsAccepted,
-      agentId: objectIdAgentId, // Use the converted ObjectId
+      agentId: new mongoose.Types.ObjectId(agentId),
     });
-    if (student) {
-      return res.status(201).json({
-        success: true,
-        message: "Student created successfully",
-        name: `${student.firstName} ${student.lastName}`,
-        id: student._id,
-                assignedAgent: agentId, // Return assigned agent ID for confirmation
 
-      });
-    }
+    return res.status(201).json({
+      success: true,
+      message: "Student created successfully",
+      studentId: student._id,
+      name: `${student.firstName} ${student.lastName}`,
+    });
   } catch (error) {
-    console.log(error);
-    return res.status(500).json({ message: error.message, error: error });
+    console.error("Add student error:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
+// Get a student by ID
 const getStudent = async (req, res) => {
   const { studentId } = req.params;
-
-  if (!studentId) {
-    return res.status(400).json({
-      message: "Please provide student ID",
-    });
-  }
-
-  try {
-    const student = await Student.findOne({ _id: studentId });
-
-    if (!student) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Student not found" });
-    }
-
-    return res.status(200).json({ success: true, student });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({
-      message: "Something went wrong",
-      error: error.message,
-    });
-  }
-};
-
-const getAllStudents = async (req, res) => {
-  try {
-    const students = await Student.find().sort({ createdAt: -1 }); // Most recent students first
-
-    if (!students || students.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No students found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      students,
-    });
-  } catch (error) {
-    console.error("Error fetching all students:", error);
-    return res.status(502).json({
-      message: "Error fetching students",
-      error: error.message,
-    });
-  }
-};
-
-const deleteStudent = async (req, res) => {
-  const { studentId } = req.body;
-
-  if (!studentId || !mongoose.Types.ObjectId.isValid(studentId)) {
-    return res.status(400).json({ message: "Valid studentId is required" });
-  }
-
-  try {
-    const deletedStudent = await Student.findByIdAndDelete(studentId);
-
-    if (!deletedStudent) {
-      return res.status(404).json({ message: "Student not found" });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Student deleted successfully",
-      student: deletedStudent,
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({
-      message: "Error deleting student",
-      error: error.message,
-    });
-  }
-};
-
-const updateStudent = async (req, res) => {
-  const { studentId, ...updatedValues } = req.body;
 
   if (!studentId) {
     return res.status(400).json({ message: "Student ID is required" });
   }
 
   try {
-    const updatedStudent = await Student.findByIdAndUpdate(
-      studentId,
-      { $set: updatedValues },
-      { new: true, runValidators: true }
-    );
-
-    if (!updatedStudent) {
-      return res.status(410).json({ message: "Student not found" });
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
     }
-
-    return res.status(200).json({
-      success: true,
-      message: "Student updated successfully",
-      student: updatedStudent,
-    });
+    return res.status(200).json({ success: true, student });
   } catch (error) {
-    console.error("Error updating student:", error);
-    return res.status(500).json({
-      message: "Error updating student",
-      error: error.message,
-    });
+    console.error("Get student error:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
+// Get all students
+const getAllStudents = async (_req, res) => {
+  try {
+    const students = await Student.find().sort({ createdAt: -1 });
+    if (!students.length) {
+      return res.status(404).json({ message: "No students found" });
+    }
+    return res.status(200).json({ success: true, students });
+  } catch (error) {
+    console.error("Get all students error:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
 
+// Delete a student
+const deleteStudent = async (req, res) => {
+  const { studentId } = req.body;
 
+  if (!mongoose.Types.ObjectId.isValid(studentId)) {
+    return res.status(400).json({ message: "Valid student ID required" });
+  }
 
+  try {
+    const deleted = await Student.findByIdAndDelete(studentId);
+    if (!deleted) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+    return res.status(200).json({ success: true, message: "Student deleted", student: deleted });
+  } catch (error) {
+    console.error("Delete student error:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
 
+// Update a student
+const updateStudent = async (req, res) => {
+  const { studentId, ...update } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(studentId)) {
+    return res.status(400).json({ message: "Valid student ID required" });
+  }
+
+  try {
+    const updated = await Student.findByIdAndUpdate(studentId, { $set: update }, { new: true });
+    if (!updated) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+    return res.status(200).json({ success: true, message: "Student updated", student: updated });
+  } catch (error) {
+    console.error("Update student error:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// Add new application to a student
 const newApplication = async (req, res) => {
-  const studentId = req.params.studentId;
+  const { studentId } = req.params;
   const {
     paymentDate,
     applyDate,
@@ -218,29 +174,19 @@ const newApplication = async (req, res) => {
   } = req.body;
 
   if (
-    !paymentDate ||
-    !applyDate ||
-    !program ||
-    !institute ||
-    !startDate ||
-    !status ||
-    !requirements ||
-    !currentStage ||
-    !requirementspartner
+    !paymentDate || !applyDate || !program || !institute ||
+    !startDate || !status || !requirements || !requirementspartner || !currentStage
   ) {
-    return res.status(400).json({
-      message: "All fields are required",
-    });
+    return res.status(400).json({ message: "All application fields are required" });
   }
 
   try {
-    const student = await Student.findById({ _id: studentId }).select("applications");
-
+    const student = await Student.findById(studentId);
     if (!student) {
-      return res.status(404).json({ message: "Student does not exist" });
+      return res.status(404).json({ message: "Student not found" });
     }
 
-    const isDuplicate = student.applications.some((app) =>
+    const isDuplicate = student.applications.some(app =>
       app.program === program &&
       app.institute === institute &&
       new Date(app.startDate).toISOString() === new Date(startDate).toISOString()
@@ -250,113 +196,94 @@ const newApplication = async (req, res) => {
       return res.status(409).json({ message: "Duplicate application detected" });
     }
 
-    const generateApplicationId = () => {
-      return Math.floor(100000 + Math.random() * 900000).toString();
-    };
+    const generateApplicationId = () => Math.floor(100000 + Math.random() * 900000).toString();
 
     const newApp = {
-      paymentDate,
       applicationId: generateApplicationId(),
+      paymentDate,
       applyDate,
       program,
       institute,
       startDate,
       status,
       requirements,
-      currentStage,
       requirementspartner,
+      currentStage,
     };
 
     student.applications.push(newApp);
     student.applicationCount = student.applications.length;
     await student.save();
 
-    return res.status(200).json({ message: "New application added successfully" });
+    return res.status(200).json({ success: true, message: "Application added" });
   } catch (error) {
-    console.log(error);
-    return res.status(500).json({ message: error, error: error.message });
+    console.error("Add application error:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
+// Update application
 const updateApplication = async (req, res) => {
   const { studentId, applicationId } = req.params;
-  const updatedData = req.body;
-
-  if (!studentId || !applicationId) {
-    return res.status(400).json({ message: "Student ID and Application ID are required" });
-  }
+  const updatedApp = req.body;
 
   try {
     const student = await Student.findById(studentId);
-
     if (!student) {
       return res.status(404).json({ message: "Student not found" });
     }
 
-    const applicationIndex = student.applications.findIndex(app => app.applicationId === applicationId);
-
-    if (applicationIndex === -1) {
+    const index = student.applications.findIndex(app => app.applicationId === applicationId);
+    if (index === -1) {
       return res.status(404).json({ message: "Application not found" });
     }
 
-    // Update the application
-    student.applications[applicationIndex] = {
-      ...student.applications[applicationIndex]._doc,
-      ...updatedData,
+    student.applications[index] = {
+      ...student.applications[index]._doc,
+      ...updatedApp,
     };
 
     await student.save();
 
     return res.status(200).json({
       success: true,
-      message: "Application updated successfully",
-      updatedApplication: student.applications[applicationIndex],
+      message: "Application updated",
+      application: student.applications[index],
     });
   } catch (error) {
-    console.error("Error updating application:", error);
-    return res.status(500).json({ message: "Internal server error", error: error.message });
+    console.error("Update application error:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-const getAllApplications = async (req, res) => {
+// Get all applications across students
+const getAllApplications = async (_req, res) => {
   try {
     const students = await Student.find().select("firstName lastName email applications");
 
-    const allApplications = [];
+    const applications = students.flatMap(student =>
+      student.applications.map(app => ({
+        ...app.toObject(),
+        studentId: student._id,
+        studentName: `${student.firstName} ${student.lastName}`,
+        email: student.email,
+      }))
+    );
 
-    students.forEach((student) => {
-      student.applications.forEach((app) => {
-        allApplications.push({
-          firstName: student.firstName,
-          lastName: student.lastName,
-          studentEmail: student.email,
-          studentId: student._id,
-          requirementspartner: app.requirementspartner,
-          ...app.toObject(),
-        });
-      });
-    });
-
-    return res.status(200).json({
-      success: true,
-      applications: allApplications,
-    });
+    return res.status(200).json({ success: true, applications });
   } catch (error) {
-    console.error("Error fetching all applications:", error);
-    return res.status(500).json({
-      message: "Error fetching all applications",
-      error: error.message,
-    });
+    console.error("Fetch applications error:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
 module.exports = {
   addNewStudent,
   getStudent,
+  getAllStudents,
   deleteStudent,
   updateStudent,
   newApplication,
+  updateApplication,
   getAllApplications,
-  getAllStudents,
-  updateApplication
 };
