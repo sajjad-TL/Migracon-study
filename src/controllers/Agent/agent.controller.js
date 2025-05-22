@@ -110,22 +110,17 @@ const getAgent = async (req, res) => {
 
 const allStudents = async (req, res) => {
   const { agentId } = req.params;
-  
-  // Validate agentId format
+
   if (!mongoose.Types.ObjectId.isValid(agentId)) {
     return res.status(400).json({ message: "Invalid agent ID format" });
   }
-  
+
   try {
     const agent = await Agent.findById(agentId);
     if (!agent) {
       return res.status(404).json({ message: "Agent does not exist." });
     }
-
-    // Convert agentId to MongoDB ObjectId to ensure proper matching
     const objectIdAgentId = new mongoose.Types.ObjectId(agentId);
-    
-    // Query students with the converted ObjectId
     const allStudents = await Student.find({ agentId: objectIdAgentId });
 
     res.status(200).json({

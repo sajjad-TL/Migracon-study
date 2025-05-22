@@ -278,6 +278,45 @@ const newApplication = async (req, res) => {
   }
 };
 
+const updateApplication = async (req, res) => {
+  const { studentId, applicationId } = req.params;
+  const updatedData = req.body;
+
+  if (!studentId || !applicationId) {
+    return res.status(400).json({ message: "Student ID and Application ID are required" });
+  }
+
+  try {
+    const student = await Student.findById(studentId);
+
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    const applicationIndex = student.applications.findIndex(app => app.applicationId === applicationId);
+
+    if (applicationIndex === -1) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    // Update the application
+    student.applications[applicationIndex] = {
+      ...student.applications[applicationIndex]._doc,
+      ...updatedData,
+    };
+
+    await student.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Application updated successfully",
+      updatedApplication: student.applications[applicationIndex],
+    });
+  } catch (error) {
+    console.error("Error updating application:", error);
+    return res.status(500).json({ message: "Internal server error", error: error.message });
+  }
+};
 
 const getAllApplications = async (req, res) => {
   try {
@@ -318,5 +357,6 @@ module.exports = {
   updateStudent,
   newApplication,
   getAllApplications,
-  getAllStudents
+  getAllStudents,
+  updateApplication
 };
