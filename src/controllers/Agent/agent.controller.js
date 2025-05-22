@@ -46,7 +46,31 @@ const updateAgent = async (req, res) => {
     });
   }
 };
+const getAllAgents = async (req, res) => {
+  try {
+    const agents = await Agent.find().sort({ createdAt: -1 }).lean();
 
+    if (!agents || agents.length === 0) {
+      return res.status(404).json({ success: false, message: "No agents found." });
+    }
+
+    // Format response: optionally remove sensitive fields like password
+    const formattedAgents = agents.map(({ password, resetPasswordToken, resetPasswordExpires, ...rest }) => rest);
+
+    return res.status(200).json({
+      success: true,
+      message: "Agents fetched successfully.",
+      agents: formattedAgents,
+    });
+  } catch (error) {
+    console.error("Error fetching agents:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while fetching agents.",
+      error: error.message,
+    });
+  }
+};
 const getAgent = async (req, res) => {
   const { agentId } = req.params;
 
@@ -82,15 +106,27 @@ const getAgent = async (req, res) => {
   }
 };
 
+// Modified allStudents function for agent.controller.js
+
 const allStudents = async (req, res) => {
   const { agentId } = req.params;
+  
+  // Validate agentId format
+  if (!mongoose.Types.ObjectId.isValid(agentId)) {
+    return res.status(400).json({ message: "Invalid agent ID format" });
+  }
+  
   try {
     const agent = await Agent.findById(agentId);
     if (!agent) {
       return res.status(404).json({ message: "Agent does not exist." });
     }
 
-    const allStudents = await Student.find({ agentId });
+    // Convert agentId to MongoDB ObjectId to ensure proper matching
+    const objectIdAgentId = new mongoose.Types.ObjectId(agentId);
+    
+    // Query students with the converted ObjectId
+    const allStudents = await Student.find({ agentId: objectIdAgentId });
 
     res.status(200).json({
       message: "Students fetched successfully",
@@ -101,9 +137,9 @@ const allStudents = async (req, res) => {
     res.status(500).json({ message: "Server error, please try again later." });
   }
 };
-
 module.exports = {
   updateAgent,
   getAgent,
   allStudents,
+  getAllAgents
 };

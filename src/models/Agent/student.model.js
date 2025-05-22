@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const studentSchema = new mongoose.Schema(
   {
+    
     firstName: { type: String, required: true },
     middleName: { type: String },
     lastName: { type: String, required: true },
@@ -35,7 +36,6 @@ const studentSchema = new mongoose.Schema(
         requirements: { type: String },
         requirementspartner: { type: String },
         currentStage: { type: String },
-        requirementspartner: { type: String },
       },
     ],
     applicationCount: { type: Number, default: 0 },

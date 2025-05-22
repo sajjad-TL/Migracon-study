@@ -19,6 +19,7 @@ const addNewStudent = async (req, res) => {
     serviceOfInterest,
     conditionsAccepted,
     agentId,
+    
   } = req.body;
 
   if (
@@ -38,7 +39,11 @@ const addNewStudent = async (req, res) => {
         "First name , last name, date of birth, passport number , passport expiry date , gender , email, phone number , citizenship  required and conditions must be accepted",
     });
   }
-
+if (!agentId) {
+    return res.status(400).json({
+      message: "Agent ID is required",
+    });
+  }
   try {
     const existingStudent = await Student.findOne({
       $or: [{ email }, { passportNumber }],
@@ -64,7 +69,7 @@ const addNewStudent = async (req, res) => {
       countryOfInterest,
       serviceOfInterest,
       conditionsAccepted,
-      agentId,
+      agentId: objectIdAgentId, // Use the converted ObjectId
     });
     if (student) {
       return res.status(201).json({
@@ -72,6 +77,8 @@ const addNewStudent = async (req, res) => {
         message: "Student created successfully",
         name: `${student.firstName} ${student.lastName}`,
         id: student._id,
+                assignedAgent: agentId, // Return assigned agent ID for confirmation
+
       });
     }
   } catch (error) {

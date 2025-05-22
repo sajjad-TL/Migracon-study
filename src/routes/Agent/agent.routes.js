@@ -4,6 +4,7 @@ const {
   updateAgent,
   getAgent,
   allStudents,
+  getAllAgents,
 } = require("../../controllers/Agent/agent.controller");
 
 const path = require("path");
@@ -24,7 +25,8 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 router.patch("/update/:agentId", upload.single("profilePicture"), updateAgent);
-router.get("/:agentId", getAgent);
+router.get("/allagents/getAllAgents", getAllAgents); // ✅ New route
 router.get("/all-students/:agentId", allStudents);
+router.get("/:agentId", getAgent);
 
 module.exports = router;
