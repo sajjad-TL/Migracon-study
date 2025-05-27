@@ -122,4 +122,23 @@ const updateAdmin = async (req, res) => {
   }
 };
 
-module.exports = { loginAdmin, updateAdmin, createAgent };
+
+// Add this function in your authController.js file
+const verifyToken = async (req, res) => {
+  try {
+    // If middleware passes, token is valid
+    res.status(200).json({ 
+      valid: true, 
+      admin: req.admin,
+      message: 'Token is valid' 
+    });
+  } catch (error) {
+    console.error('Token verification error:', error);
+    res.status(401).json({ 
+      valid: false, 
+      message: 'Invalid token' 
+    });
+  }
+};
+
+module.exports = { loginAdmin, updateAdmin, createAgent, verifyToken };

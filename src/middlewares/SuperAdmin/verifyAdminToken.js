@@ -1,3 +1,6 @@
+// middlewares/SuperAdmin/verifyAdminToken.js
+const jwt = require('jsonwebtoken'); // Add this import if missing
+
 const verifyAdminToken = (req, res, next) => {
   console.log('🔐 verifyAdminToken middleware called');
 
@@ -25,3 +28,5 @@ const verifyAdminToken = (req, res, next) => {
     return res.status(401).json({ message: 'Invalid or expired token' });
   }
 };
+
+module.exports = verifyAdminToken;

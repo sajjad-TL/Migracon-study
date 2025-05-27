@@ -1,15 +1,18 @@
+// Add this route in your authRoutes.js file
 const express = require('express');
 const router = express.Router();
 const {
   loginAdmin,
   updateAdmin,
-  createAgent
+  createAgent,
+  verifyToken  // Add this new function
 } = require('../../controllers/SuperAdmin/authController');
-// const verifyAdminToken = require('../../middlewares/SuperAdmin/verifyAdminToken');
+const verifyAdminToken = require('../../middlewares/SuperAdmin/verifyAdminToken');
 
 // Routes
-router.post('/login', loginAdmin); // Public
-// router.patch('/update', verifyAdminToken, updateAdmin); // Protected
-// router.post('/create-agent', verifyAdminToken, createAgent); // Protected
+router.post('/login', loginAdmin);
+router.patch('/update', verifyAdminToken, updateAdmin);
+router.post('/create-agent', verifyAdminToken, createAgent);
+router.get('/verify-token', verifyAdminToken, verifyToken); // New route for token verification
 
 module.exports = router;
