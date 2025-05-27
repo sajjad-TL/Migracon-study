@@ -201,7 +201,13 @@ const googleLogin = async (req, res) => {
     res.status(401).json({ message: err });
   }
 };
-
+const validateTokenRoute = (req, res) => {
+  // If we reach here, the middleware has already validated the token
+  res.status(200).json({ 
+    message: 'Token is valid',
+    agentId: req.agentId 
+  });
+};
 module.exports = {
   registerAgent,
   loginAgent,
@@ -209,4 +215,5 @@ module.exports = {
   verifyCode,
   resetPassword,
   googleLogin,
+  validateTokenRoute
 };

@@ -51,16 +51,6 @@ const updateAdmin = async (req, res) => {
   const { currentEmail, currentPassword, newEmail, newPassword } = req.body;
 
   try {
-    // Authenticate with token first (validate JWT)
-    const token = req.headers['authorization']?.split(' ')[1];
-    if (!token) return res.status(403).json({ message: 'Access Denied. No token provided.' });
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET_ADMIN);
-    if (decoded.role !== 'admin' || !decoded.isSuperAdmin) {
-      return res.status(403).json({ message: "Forbidden: Not an admin or not super admin" });
-    }
-
-    // Current password verification
     const admin = await Admin.findOne({ email: currentEmail });
     if (!admin) {
       return res.status(404).json({ message: "Admin not found" });
@@ -81,8 +71,8 @@ const updateAdmin = async (req, res) => {
     console.error("Update error:", error);
     res.status(500).json({ message: "Server error" });
   }
-
 };
+
 
   const createAgent = async (req, res) => {
   try {
