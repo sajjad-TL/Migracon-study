@@ -5,6 +5,7 @@ const {
   getAgent,
   allStudents,
   getAllAgents,
+  getTopAgents  // ← Ye add karein
 } = require("../../controllers/Agent/agent.controller");
 
 const path = require("path");
@@ -26,6 +27,7 @@ const upload = multer({ storage });
 
 router.patch("/update/:agentId", upload.single("profilePicture"), updateAgent);
 router.get("/allagents/getAllAgents", getAllAgents); // ✅ New route
+router.get("/top-agents", getTopAgents);  // ← Ye new route add karein
 router.get("/all-students/:agentId", allStudents);
 router.get("/:agentId", getAgent);
 

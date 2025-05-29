@@ -132,9 +132,92 @@ const allStudents = async (req, res) => {
     res.status(500).json({ message: "Server error, please try again later." });
   }
 };
+
+
+
+const getTopAgents = async (req, res) => {
+  try {
+    // All agents fetch karein
+    const agents = await Agent.find().lean();
+    
+    if (!agents || agents.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "No agents found." 
+      });
+    }
+
+    // Har agent ke liye application count calculate karein
+    const agentsWithApplications = await Promise.all(
+      agents.map(async (agent) => {
+        // Agent ke students find karein
+        const students = await Student.find({ agentId: agent._id }).lean();
+        
+        // Total applications count karein
+        let totalApplications = 0;
+        let acceptedApplications = 0;
+        let totalRevenue = 0;
+        
+        students.forEach(student => {
+          if (student.applications && student.applications.length > 0) {
+            totalApplications += student.applications.length;
+            
+            // Accepted applications count karein
+            const accepted = student.applications.filter(app => 
+              app.status === "Accepted"
+            ).length;
+            acceptedApplications += accepted;
+          }
+        });
+
+        // Success rate calculate karein
+        const successRate = totalApplications > 0 
+          ? Math.round((acceptedApplications / totalApplications) * 100)
+          : 0;
+
+        // Revenue calculate karein (example: $2000 per accepted application)
+        totalRevenue = acceptedApplications * 2000;
+
+        return {
+          agentId: agent._id,
+          firstName: agent.firstName,
+          lastName: agent.lastName,
+          email: agent.email,
+          profilePicture: agent.profilePicture,
+          totalApplications,
+          acceptedApplications,
+          successRate,
+          totalRevenue,
+          studentsCount: students.length
+        };
+      })
+    );
+
+    // Applications ke base pe sort karein (descending order)
+    const sortedAgents = agentsWithApplications
+      .sort((a, b) => b.totalApplications - a.totalApplications)
+      .slice(0, 2); // Top 2 agents
+
+    return res.status(200).json({
+      success: true,
+      message: "Top agents fetched successfully.",
+      topAgents: sortedAgents,
+    });
+
+  } catch (error) {
+    console.error("Error fetching top agents:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while fetching top agents.",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   updateAgent,
   getAgent,
   allStudents,
-  getAllAgents
+  getAllAgents,
+  getTopAgents  // ← Ye add karein
 };
