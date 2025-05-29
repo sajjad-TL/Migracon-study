@@ -9,6 +9,8 @@ const {
   getAllApplications,
   getAllStudents,
   updateApplication,
+  getLatestApplications
+
 
 } = require("../../controllers/Agent/student.controller");
 
@@ -25,6 +27,8 @@ router.patch('/:studentId/update-application/:applicationId', updateApplication)
 
 
 router.get("/getAllStudents", getAllStudents); // ✅ New route
+router.get("/latestApplications" ,  getLatestApplications)
+
 
 router.get("/:studentId", getStudent);
 
