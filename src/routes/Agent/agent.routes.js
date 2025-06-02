@@ -5,16 +5,15 @@ const {
   getAgent,
   allStudents,
   getAllAgents,
-  getTopAgents  // ← Ye add karein
+  getTopAgents 
 } = require("../../controllers/Agent/agent.controller");
 
 const path = require("path");
 const multer = require("multer");
 
-// ✅ Corrected Multer storage config
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "profilePictures/"); // ✅ use cb properly with 3 arguments
+    cb(null, "profilePictures/");
   },
   filename: function (req, file, cb) {
     const extension = path.extname(file.originalname);
@@ -26,8 +25,8 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 router.patch("/update/:agentId", upload.single("profilePicture"), updateAgent);
-router.get("/allagents/getAllAgents", getAllAgents); // ✅ New route
-router.get("/top-agents", getTopAgents);  // ← Ye new route add karein
+router.get("/allagents/getAllAgents", getAllAgents);
+router.get("/top-agents", getTopAgents);
 router.get("/all-students/:agentId", allStudents);
 router.get("/:agentId", getAgent);
 

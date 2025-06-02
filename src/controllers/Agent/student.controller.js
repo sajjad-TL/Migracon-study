@@ -1,6 +1,6 @@
 const Student = require("../../models/Agent/student.model");
 const mongoose = require("mongoose");
-const Agent = require("../../models/Agent/agent.model"); // Optional: only if you want to verify agent existence
+const Agent = require("../../models/Agent/agent.model");
 
 // Add New Student
 const addNewStudent = async (req, res) => {
@@ -173,7 +173,7 @@ const updateStudent = async (req, res) => {
   }
 };
 
-// Add New Application to Student
+// Add New Application
 const newApplication = async (req, res) => {
   const { studentId } = req.params;
   const {
@@ -218,6 +218,7 @@ const newApplication = async (req, res) => {
       requirements,
       currentStage,
       requirementspartner,
+      createdAt: new Date()
     };
 
     student.applications.push(newApp);
@@ -263,10 +264,10 @@ const updateApplication = async (req, res) => {
   }
 };
 
-// Get All Applications
+
 const getAllApplications = async (req, res) => {
   try {
-    const students = await Student.find().select("firstName lastName email applications");
+    const students = await Student.find().select("firstName lastName email applications").lean();
 
     const allApplications = [];
 
@@ -277,7 +278,7 @@ const getAllApplications = async (req, res) => {
           firstName: student.firstName,
           lastName: student.lastName,
           email: student.email,
-          ...app.toObject(),
+          ...app,
         });
       });
     });
@@ -288,12 +289,12 @@ const getAllApplications = async (req, res) => {
     console.error("Error fetching applications:", error);
     return res.status(500).json({ message: "Server error", error: error.message });
   }
-
 };
+
 
 const getLatestApplications = async (req, res) => {
   try {
-    const students = await Student.find().select("firstName lastName email applications agent");
+    const students = await Student.find().select("firstName lastName email applications agentId").lean();
 
     let allApplications = [];
 
@@ -304,14 +305,17 @@ const getLatestApplications = async (req, res) => {
           firstName: student.firstName,
           lastName: student.lastName,
           email: student.email,
-          agent: student.agent, // assuming agent is stored in Student model
-          ...app.toObject(),
+          agentId: student.agentId,
+          createdAt: app.createdAt || new Date(),
+          ...app,
         });
       });
     });
 
-    // Sort applications by createdAt descending
-    const latestApplications = allApplications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 10); // latest 10
+    // Sort by application.createdAt
+    const latestApplications = allApplications
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 10);
 
     return res.status(200).json({ success: true, latestApplications });
 
@@ -321,6 +325,88 @@ const getLatestApplications = async (req, res) => {
   }
 };
 
+const uploadDocument = async (req, res) => {
+  try {
+    const studentId = req.params.studentId;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const documentMeta = {
+      filename: file.filename,
+      originalname: file.originalname,
+      mimetype: file.mimetype,
+      path: file.path,
+      size: file.size,
+      uploadedAt: new Date()
+    };
+
+    const student = await Student.findByIdAndUpdate(
+      studentId,
+      { $push: { documents: documentMeta } },
+      { new: true }
+    );
+
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "File uploaded and saved to student record",
+      document: documentMeta
+    });
+
+  } catch (error) {
+    console.error("Upload error:", error);
+    return res.status(500).json({ message: "Internal server error", error });
+  }
+};
+
+const deleteDocument = async (req, res) => {
+  try {
+    const { studentId, filename } = req.params;
+    console.log("DELETE request received for studentId:", studentId, "filename:", filename);
+
+    const student = await Student.findById(studentId);
+    if (!student) {
+      console.log("Student not found");
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    const document = student.documents.find(doc => doc.filename === filename);
+    if (!document) {
+      console.log("Document not found in student.documents");
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    console.log("Document found:", document);
+
+    student.documents = student.documents.filter(doc => doc.filename !== filename);
+    await student.save();
+
+    const filePath = path.resolve(document.path);
+    console.log("Attempting to delete file at:", filePath);
+
+    fs.unlink(filePath, (err) => {
+      if (err) {
+        console.error("Error deleting file:", err);
+        return res.status(500).json({ message: "Failed to delete file", error: err });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Document deleted successfully"
+      });
+    });
+
+  } catch (error) {
+    console.error("Delete error:", error);
+    return res.status(500).json({ message: "Internal server error", error });
+  }
+};
 
 
 
@@ -333,5 +419,7 @@ module.exports = {
   newApplication,
   updateApplication,
   getAllApplications,
-  getLatestApplications
+  getLatestApplications,
+  uploadDocument,
+  deleteDocument
 };
