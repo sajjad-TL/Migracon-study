@@ -19,26 +19,22 @@ const addNewStudent = async (req, res) => {
     status,
     countryOfInterest,
     serviceOfInterest,
-    conditionsAccepted,
+    conditionsAccepted, // ye field controller mein hai
     agentId,
   } = req.body;
 
   if (
     !firstName || !lastName || !dateOfBirth || !passportNumber || !passportExpiryDate ||
-    !gender || !email || !phoneNumber || !conditionsAccepted || !citizenOf
+    !gender || !email || !phoneNumber || !citizenOf
   ) {
     return res.status(400).json({
-      message: "Missing required fields: first name, last name, date of birth, passport details, gender, email, phone number, citizenship, and acceptance of conditions."
+      message: "Missing required fields: first name, last name, date of birth, passport details, gender, email, phone number, citizenship."
     });
   }
 
   if (!agentId || !mongoose.Types.ObjectId.isValid(agentId)) {
     return res.status(400).json({ message: "Valid Agent ID is required" });
   }
-
-  // Optional: Verify if Agent exists
-  // const agentExists = await Agent.findById(agentId);
-  // if (!agentExists) return res.status(404).json({ message: "Agent not found" });
 
   try {
     const existingStudent = await Student.findOne({
@@ -64,7 +60,7 @@ const addNewStudent = async (req, res) => {
       status,
       countryOfInterest,
       serviceOfInterest,
-      conditionsAccepted,
+      termsAccepted: conditionsAccepted || true, // conditionsAccepted ko termsAccepted mein map kar diya
       agentId,
     });
 
@@ -152,6 +148,12 @@ const updateStudent = async (req, res) => {
 
   if (!studentId || !mongoose.Types.ObjectId.isValid(studentId)) {
     return res.status(400).json({ message: "Valid student ID is required" });
+  }
+
+  // Agar conditionsAccepted aaya hai to usse termsAccepted mein convert kar do
+  if (updateData.conditionsAccepted !== undefined) {
+    updateData.termsAccepted = updateData.conditionsAccepted;
+    delete updateData.conditionsAccepted;
   }
 
   try {
@@ -334,14 +336,15 @@ const uploadDocument = async (req, res) => {
       return res.status(400).json({ message: "No file uploaded" });
     }
 
-    const documentMeta = {
-      filename: file.filename,
-      originalname: file.originalname,
-      mimetype: file.mimetype,
-      path: file.path,
-      size: file.size,
-      uploadedAt: new Date()
-    };
+ const documentMeta = {
+  filename: String(file.filename),  // Force string
+  originalname: file.originalname,
+  mimetype: file.mimetype,
+  path: file.path,
+  size: file.size,
+  uploadedAt: new Date()
+};
+
 
     const student = await Student.findByIdAndUpdate(
       studentId,
@@ -370,6 +373,11 @@ const deleteDocument = async (req, res) => {
     const { studentId, filename } = req.params;
     console.log("DELETE request received for studentId:", studentId, "filename:", filename);
 
+    // Validate studentId
+    if (!studentId || !mongoose.Types.ObjectId.isValid(studentId)) {
+      return res.status(400).json({ message: "Valid student ID is required" });
+    }
+
     const student = await Student.findById(studentId);
     if (!student) {
       console.log("Student not found");
@@ -384,31 +392,44 @@ const deleteDocument = async (req, res) => {
 
     console.log("Document found:", document);
 
+    // Remove document from student's documents array
     student.documents = student.documents.filter(doc => doc.filename !== filename);
     await student.save();
+
+    // Import fs and path at the top of the file if not already imported
+    const fs = require('fs');
+    const path = require('path');
 
     const filePath = path.resolve(document.path);
     console.log("Attempting to delete file at:", filePath);
 
-    fs.unlink(filePath, (err) => {
-      if (err) {
-        console.error("Error deleting file:", err);
-        return res.status(500).json({ message: "Failed to delete file", error: err });
-      }
-
+    // Use fs.promises for better async handling
+    try {
+      await fs.promises.unlink(filePath);
+      console.log("File deleted successfully");
+      
       return res.status(200).json({
         success: true,
         message: "Document deleted successfully"
       });
-    });
+    } catch (fileError) {
+      console.error("Error deleting file:", fileError);
+      // Even if file deletion fails, we've already removed it from DB
+      return res.status(200).json({
+        success: true,
+        message: "Document removed from database (file may not exist on disk)"
+      });
+    }
 
   } catch (error) {
     console.error("Delete error:", error);
-    return res.status(500).json({ message: "Internal server error", error });
+    return res.status(500).json({ 
+      success: false,
+      message: "Internal server error", 
+      error: error.message 
+    });
   }
 };
-
-
 
 module.exports = {
   addNewStudent,

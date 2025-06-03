@@ -37,7 +37,7 @@ const loginAdmin = async (req, res) => {
     }
 
     // If password matches, send JWT token
-    const token = jwt.sign({ email, role: 'admin', isSuperAdmin: true }, process.env.JWT_SECRET_ADMIN, { expiresIn: '1h' });
+    const token = jwt.sign({ email, role: 'admin', isSuperAdmin: true }, process.env.JWT_SECRET_ADMIN, { expiresIn: '1d' });
     res.json({ token, message: "Login successful" });
 
   } catch (error) {

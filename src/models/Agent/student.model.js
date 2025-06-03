@@ -10,27 +10,13 @@ const applicationSchema = new mongoose.Schema(
     startDate: { type: Date },
     status: {
       type: String,
-      enum: ["Pending", "Submitted", "Approved", "Rejected"],
+      enum: ["Active", "Inactive", "Pending"],
       default: "Pending",
     },
     requirements: { type: String },
     requirementspartner: { type: String },
     currentStage: { type: String },
     createdAt: {
-      type: Date,
-      default: Date.now,
-    },
-  },
-  { _id: false }
-);
-
-const documentSchema = new mongoose.Schema(
-  {
-    filename: { type: String },
-    originalName: { type: String },
-    fileType: { type: String },
-    filePath: { type: String },
-    uploadedAt: {
       type: Date,
       default: Date.now,
     },
@@ -64,38 +50,48 @@ const studentSchema = new mongoose.Schema(
     phoneNumber: {
       type: String,
       required: true,
-      match: [/^\+?[0-9]{7,15}$/, "Please enter a valid phone number"],
+      // Phone validation ko remove kar diya - ab koi bhi format accept karega
+      validate: {
+        validator: function(v) {
+          // Agar phone number hai to kam se kam 7 characters hone chahiye
+          return v && v.length >= 7;
+        },
+        message: "Phone number should be at least 7 characters"
+      }
     },
 
     referralSource: { type: String },
 
     status: {
       type: String,
-      enum: ["New", "In Progress", "Completed", "Rejected", "On Hold"],
+      enum: ["New", "In Progress", "Completed", "Rejected", "On Hold", "Active", "Inactive"],
       default: "New",
     },
 
     countryOfInterest: { type: String },
     serviceOfInterest: { type: String },
-    termsAccepted: { type: Boolean, required: true },
+    
+    // termsAccepted ko required false kar diya aur default true set kar diya
+    termsAccepted: { type: Boolean, required: false, default: true },
 
     agentId: { type: mongoose.Schema.Types.ObjectId, ref: "Agent" },
 
     applications: [applicationSchema],
 
-    documents: [
-      {
-    filename: { type: String },
-    originalName: { type: String },
-    fileType: { type: String },
-    filePath: { type: String },
-    uploadedAt: {
-      type: Date,
-      default: Date.now,
+ documents: [
+  {
+    filename: {
+      type: String,
+      required: true
     },
-  },
-  { _id: false }
-    ],
+    originalname: String,
+    mimetype: String,
+    path: String,
+    size: Number,
+    uploadedAt: Date
+  }
+],
+
 
     applicationCount: { type: Number, default: 0 },
   },
