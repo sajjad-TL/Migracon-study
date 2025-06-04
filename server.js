@@ -50,6 +50,7 @@ app.use("/notification", require("./src/routes/Agent/notificationPreferences.rou
 
 app.use("/api/password", require("./src/routes/SuperAdmin/passwordRoutes"));
 app.use("/api/auth", require("./src/routes/SuperAdmin/authRoutes"));
+app.use("/payment", require("./src/routes/SuperAdmin/paymentRoutes"));
 
 // --- SERVER ---
 const PORT = process.env.PORT || 5000;

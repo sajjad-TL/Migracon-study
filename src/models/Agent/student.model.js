@@ -10,7 +10,7 @@ const applicationSchema = new mongoose.Schema(
     startDate: { type: Date },
     status: {
       type: String,
-      enum: ["Active", "Inactive", "Pending"],
+      enum: ["Active", "Inactive", "Pending", "Rejected","Accepted", "not-paid", "Paid", "Withdrawn" ],
       default: "Pending",
     },
     requirements: { type: String },
@@ -50,10 +50,8 @@ const studentSchema = new mongoose.Schema(
     phoneNumber: {
       type: String,
       required: true,
-      // Phone validation ko remove kar diya - ab koi bhi format accept karega
       validate: {
         validator: function(v) {
-          // Agar phone number hai to kam se kam 7 characters hone chahiye
           return v && v.length >= 7;
         },
         message: "Phone number should be at least 7 characters"
@@ -64,14 +62,12 @@ const studentSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["New", "In Progress", "Completed", "Rejected", "On Hold", "Active", "Inactive"],
+      enum: ["Pending", "In Progress", "Completed", "Rejected", "On Hold", "Active", "Inactive"],
       default: "New",
     },
 
     countryOfInterest: { type: String },
     serviceOfInterest: { type: String },
-    
-    // termsAccepted ko required false kar diya aur default true set kar diya
     termsAccepted: { type: Boolean, required: false, default: true },
 
     agentId: { type: mongoose.Schema.Types.ObjectId, ref: "Agent" },
