@@ -5,7 +5,7 @@ const createPayment = async (req, res) => {
   try {
     const { agentId, amount, method, transactionId } = req.body;
 
-    // 💡 Validate required fields
+
     if (!agentId || !amount || !method || !transactionId) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -31,7 +31,7 @@ const createPayment = async (req, res) => {
 
     await payment.save();
 
-    // Send Email
+    
     await sendEmail(
       'shakeel.sakha@tecklogics.com',
       'New Payment Received',
@@ -82,9 +82,21 @@ const getLatestPaymentByAgent = async (req, res) => {
   }
 };
 
+const getAllPayments = async (req, res) => {
+  try {
+    const payments = await Payment.find().sort({ createdAt: -1 }); 
+    res.status(200).json(payments);
+  } catch (error) {
+    console.error('Error fetching all payments:', error);
+    res.status(500).json({ error: 'Failed to fetch payments' });
+  }
+};
+
+
 
 module.exports = {
   createPayment,
   getPaymentsByAgent,
   getLatestPaymentByAgent, 
+  getAllPayments
 };
