@@ -47,6 +47,7 @@ app.use("/api/other-auth", require("./src/routes/Agent/auth.routes"));
 app.use("/student", require("./src/routes/Agent/student.routes"));
 app.use("/agent", require("./src/routes/Agent/agent.routes"));
 app.use("/notification", require("./src/routes/Agent/notificationPreferences.routes"));
+app.use('/api/commission', require('./src/routes/SuperAdmin/commission'));
 
 app.use("/api/password", require("./src/routes/SuperAdmin/passwordRoutes"));
 app.use("/api/auth", require("./src/routes/SuperAdmin/authRoutes"));
