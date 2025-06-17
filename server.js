@@ -38,7 +38,8 @@ app.use(cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use('/profilePictures', express.static(path.join(__dirname, 'profilePictures')));
+// ✅ CORRECT - this is where multer is saving files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const connectDB = require("./src/config/Agent/db");
 connectDB();
@@ -52,6 +53,9 @@ app.use('/api/commission', require('./src/routes/SuperAdmin/commission'));
 app.use("/api/password", require("./src/routes/SuperAdmin/passwordRoutes"));
 app.use("/api/auth", require("./src/routes/SuperAdmin/authRoutes"));
 app.use("/payment", require("./src/routes/SuperAdmin/paymentRoutes"));
+app.use('/api/schools', require('./src/routes/SuperAdmin/schoolRoutes'));
+app.use('/api/programs', require('./src/routes/SuperAdmin/programRoutes'));
+
 
 // --- SERVER ---
 const PORT = process.env.PORT || 5000;

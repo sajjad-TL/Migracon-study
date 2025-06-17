@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Commission = require('../../models/SuperAdmin/Commission');
 const Agent = require('../../models/Agent/agent.model');
 const Student = require('../../models/Agent/student.model');
@@ -9,13 +10,23 @@ const Payment = require('../../models/SuperAdmin/Payment');
 // Get Dashboard Statistics
 router.get('/dashboard/stats', async (req, res) => {
   try {
-    // Total Commission
+    // Get current date info
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1; // 1-12
+    const currentYear = now.getFullYear();
+    
+    // Start and end of current month for precise filtering
+    const startOfMonth = new Date(currentYear, now.getMonth(), 1);
+    const endOfMonth = new Date(currentYear, now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    // Total Commission (all time)
     const totalCommissionResult = await Commission.aggregate([
+      { $match: { status: { $in: ['Approved', 'Paid'] } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
     const totalCommission = totalCommissionResult[0]?.total || 0;
 
-    // Pending Payouts
+    // Pending Payouts (approved but not paid)
     const pendingPayoutsResult = await Commission.aggregate([
       { $match: { status: 'Approved' } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
@@ -25,19 +36,14 @@ router.get('/dashboard/stats', async (req, res) => {
     // Count of pending payment requests
     const pendingRequestsCount = await PaymentRequest.countDocuments({ status: 'Pending' });
 
-    // Paid This Month
-    const currentMonth = new Date().getMonth() + 1;
-    const currentYear = new Date().getFullYear();
-    
+    // Paid This Month - using date range for better accuracy
     const paidThisMonthResult = await Commission.aggregate([
       { 
         $match: { 
           status: 'Paid',
-          $expr: {
-            $and: [
-              { $eq: [{ $month: '$paidDate' }, currentMonth] },
-              { $eq: [{ $year: '$paidDate' }, currentYear] }
-            ]
+          paidDate: {
+            $gte: startOfMonth,
+            $lte: endOfMonth
           }
         } 
       },
@@ -48,30 +54,50 @@ router.get('/dashboard/stats', async (req, res) => {
     // Count of payments processed this month
     const paymentsProcessedCount = await Commission.countDocuments({
       status: 'Paid',
-      $expr: {
-        $and: [
-          { $eq: [{ $month: '$paidDate' }, currentMonth] },
-          { $eq: [{ $year: '$paidDate' }, currentYear] }
-        ]
+      paidDate: {
+        $gte: startOfMonth,
+        $lte: endOfMonth
       }
     });
 
-    // Active Agents
-    const activeAgents = await Agent.countDocuments();
+    // Alternative: Also check Payment collection for this month
+    const paymentRecordsThisMonth = await Payment.aggregate([
+      {
+        $match: {
+          status: 'completed',
+          paymentDate: {
+            $gte: startOfMonth,
+            $lte: endOfMonth
+          }
+        }
+      },
+      { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
+    ]);
 
-    // Last month comparison for total commission
+    // Use whichever has data (fallback mechanism)
+    const finalPaidThisMonth = paidThisMonth > 0 ? paidThisMonth : (paymentRecordsThisMonth[0]?.total || 0);
+    const finalPaymentsCount = paymentsProcessedCount > 0 ? paymentsProcessedCount : (paymentRecordsThisMonth[0]?.count || 0);
+
+    // Active Agents (agents with at least one commission)
+    const activeAgentsResult = await Commission.aggregate([
+      { $group: { _id: '$agentId' } },
+      { $count: 'activeAgents' }
+    ]);
+    const activeAgents = activeAgentsResult[0]?.activeAgents || 0;
+
+    // Growth calculation - previous month
     const lastMonth = currentMonth === 1 ? 12 : currentMonth - 1;
     const lastMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+    const startOfLastMonth = new Date(lastMonthYear, lastMonth - 1, 1);
+    const endOfLastMonth = new Date(lastMonthYear, lastMonth, 0, 23, 59, 59, 999);
     
     const lastMonthCommissionResult = await Commission.aggregate([
       { 
         $match: { 
           status: { $in: ['Approved', 'Paid'] },
-          $expr: {
-            $and: [
-              { $eq: [{ $month: '$createdAt' }, lastMonth] },
-              { $eq: [{ $year: '$createdAt' }, lastMonthYear] }
-            ]
+          createdAt: {
+            $gte: startOfLastMonth,
+            $lte: endOfLastMonth
           }
         } 
       },
@@ -81,14 +107,27 @@ router.get('/dashboard/stats', async (req, res) => {
     
     const commissionGrowthPercent = lastMonthCommission > 0 
       ? Math.round(((totalCommission - lastMonthCommission) / lastMonthCommission) * 100)
-      : 0;
+      : totalCommission > 0 ? 100 : 0;
+
+    // Debug logging
+    console.log('Dashboard Stats Debug:', {
+      currentMonth,
+      currentYear,
+      startOfMonth,
+      endOfMonth,
+      paidThisMonth: finalPaidThisMonth,
+      paymentsProcessedCount: finalPaymentsCount,
+      totalCommission,
+      pendingPayouts,
+      activeAgents
+    });
 
     res.json({
       totalCommission,
       pendingPayouts,
       pendingRequestsCount,
-      paidThisMonth,
-      paymentsProcessedCount,
+      paidThisMonth: finalPaidThisMonth,
+      paymentsProcessedCount: finalPaymentsCount,
       activeAgents,
       commissionGrowthPercent
     });
@@ -115,6 +154,11 @@ router.get('/agents', async (req, res) => {
       };
     }
 
+    // Add country filter if specified
+    if (country) {
+      searchFilter.country = country;
+    }
+
     const agents = await Agent.find(searchFilter)
       .limit(limit * 1)
       .skip((page - 1) * limit)
@@ -124,24 +168,24 @@ router.get('/agents', async (req, res) => {
       agents.map(async (agent) => {
         // Total Commission
         const totalCommissionResult = await Commission.aggregate([
-          { $match: { agentId: agent._id } },
+          { $match: { agentId: agent._id, status: { $in: ['Approved', 'Paid'] } } },
           { $group: { _id: null, total: { $sum: '$amount' } } }
         ]);
         const totalCommission = totalCommissionResult[0]?.total || 0;
 
         // This Month Commission
-        const currentMonth = new Date().getMonth() + 1;
-        const currentYear = new Date().getFullYear();
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
         
         const thisMonthResult = await Commission.aggregate([
           { 
             $match: { 
               agentId: agent._id,
-              $expr: {
-                $and: [
-                  { $eq: [{ $month: '$createdAt' }, currentMonth] },
-                  { $eq: [{ $year: '$createdAt' }, currentYear] }
-                ]
+              status: { $in: ['Approved', 'Paid'] },
+              createdAt: {
+                $gte: startOfMonth,
+                $lte: endOfMonth
               }
             } 
           },
@@ -184,7 +228,7 @@ router.get('/agents', async (req, res) => {
           pendingRequests,
           applications,
           successful: successfulCount,
-          status: 'Active' // You can add status field to Agent model if needed
+          status: agent.isActive !== false ? 'Active' : 'Inactive'
         };
       })
     );
@@ -200,6 +244,108 @@ router.get('/agents', async (req, res) => {
   } catch (error) {
     console.error('Get agents error:', error);
     res.status(500).json({ error: 'Failed to fetch agents data' });
+  }
+});
+
+// Create sample data for testing (remove in production)
+router.post('/create-sample-data', async (req, res) => {
+  try {
+    // Create sample commissions with paid status for current month
+    const now = new Date();
+    const sampleCommissions = [
+      {
+        agentId: new mongoose.Types.ObjectId(), // Replace with actual agent ID
+        studentId: new mongoose.Types.ObjectId(), // Replace with actual student ID
+        amount: 500,
+        status: 'Paid',
+        type: 'Application Fee',
+        description: 'Sample commission 1',
+        program: 'Computer Science',
+        institute: 'Sample University',
+        month: now.toLocaleString('default', { month: 'long' }),
+        year: now.getFullYear(),
+        paidDate: now,
+        createdAt: now
+      },
+      {
+        agentId: new mongoose.Types.ObjectId(), // Replace with actual agent ID
+        studentId: new mongoose.Types.ObjectId(), // Replace with actual student ID
+        amount: 750,
+        status: 'Paid',
+        type: 'Application Fee',
+        description: 'Sample commission 2',
+        program: 'Business Administration',
+        institute: 'Sample College',
+        month: now.toLocaleString('default', { month: 'long' }),
+        year: now.getFullYear(),
+        paidDate: now,
+        createdAt: now
+      }
+    ];
+
+    await Commission.insertMany(sampleCommissions);
+    res.json({ message: 'Sample data created successfully' });
+  } catch (error) {
+    console.error('Create sample data error:', error);
+    res.status(500).json({ error: 'Failed to create sample data' });
+  }
+});
+
+// Process Payment Request
+router.put('/payment-request/:requestId', async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const { status, processedBy, rejectionReason } = req.body;
+
+    const updateData = { 
+      status, 
+      processedBy, 
+      processedDate: new Date() 
+    };
+
+    if (status === 'Rejected') {
+      updateData.rejectionReason = rejectionReason;
+    }
+
+    const paymentRequest = await PaymentRequest.findByIdAndUpdate(
+      requestId,
+      updateData,
+      { new: true }
+    ).populate('agentId', 'firstName lastName email');
+
+    if (!paymentRequest) {
+      return res.status(404).json({ error: 'Payment request not found' });
+    }
+
+    // If approved, create payment record and update commission status
+    if (status === 'Paid') {
+      const payment = new Payment({
+        agentId: paymentRequest.agentId._id,
+        amount: paymentRequest.amount,
+        method: 'Bank Transfer',
+        transactionId: `TXN${Date.now()}`,
+        status: 'completed',
+        paymentDate: new Date() // Make sure to set payment date
+      });
+      await payment.save();
+
+      // Update related commissions to Paid status with current date
+      await Commission.updateMany(
+        { 
+          agentId: paymentRequest.agentId._id, 
+          status: 'Approved' 
+        },
+        { 
+          status: 'Paid', 
+          paidDate: new Date() 
+        }
+      );
+    }
+
+    res.json({ message: 'Payment request processed successfully', paymentRequest });
+  } catch (error) {
+    console.error('Process payment request error:', error);
+    res.status(500).json({ error: 'Failed to process payment request' });
   }
 });
 
@@ -224,7 +370,7 @@ router.get('/agent/:agentId', async (req, res) => {
 
     // Agent summary
     const totalEarned = await Commission.aggregate([
-      { $match: { agentId: mongoose.Types.ObjectId(agentId) } },
+      { $match: { agentId: mongoose.Types.ObjectId(agentId), status: { $in: ['Approved', 'Paid'] } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
@@ -265,7 +411,8 @@ router.post('/create', async (req, res) => {
       program,
       institute,
       month: new Date().toLocaleString('default', { month: 'long' }),
-      year: new Date().getFullYear()
+      year: new Date().getFullYear(),
+      status: 'Pending' // Default status
     });
 
     await commission.save();
@@ -320,7 +467,8 @@ router.post('/auto-generate', async (req, res) => {
       program: application.program,
       institute: application.institute,
       month: new Date().toLocaleString('default', { month: 'long' }),
-      year: new Date().getFullYear()
+      year: new Date().getFullYear(),
+      status: 'Approved' // Auto-approve when application is accepted
     });
 
     await commission.save();
@@ -425,63 +573,6 @@ router.post('/payment-request', async (req, res) => {
   } catch (error) {
     console.error('Create payment request error:', error);
     res.status(500).json({ error: 'Failed to create payment request' });
-  }
-});
-
-// Process Payment Request
-router.put('/payment-request/:requestId', async (req, res) => {
-  try {
-    const { requestId } = req.params;
-    const { status, processedBy, rejectionReason } = req.body;
-
-    const updateData = { 
-      status, 
-      processedBy, 
-      processedDate: new Date() 
-    };
-
-    if (status === 'Rejected') {
-      updateData.rejectionReason = rejectionReason;
-    }
-
-    const paymentRequest = await PaymentRequest.findByIdAndUpdate(
-      requestId,
-      updateData,
-      { new: true }
-    ).populate('agentId', 'firstName lastName email');
-
-    if (!paymentRequest) {
-      return res.status(404).json({ error: 'Payment request not found' });
-    }
-
-    // If approved, create payment record and update commission status
-    if (status === 'Paid') {
-      const payment = new Payment({
-        agentId: paymentRequest.agentId._id,
-        amount: paymentRequest.amount,
-        method: 'Bank Transfer',
-        transactionId: `TXN${Date.now()}`,
-        status: 'completed'
-      });
-      await payment.save();
-
-      // Update related commissions to Paid status
-      await Commission.updateMany(
-        { 
-          agentId: paymentRequest.agentId._id, 
-          status: 'Approved' 
-        },
-        { 
-          status: 'Paid', 
-          paidDate: new Date() 
-        }
-      );
-    }
-
-    res.json({ message: 'Payment request processed successfully', paymentRequest });
-  } catch (error) {
-    console.error('Process payment request error:', error);
-    res.status(500).json({ error: 'Failed to process payment request' });
   }
 });
 
