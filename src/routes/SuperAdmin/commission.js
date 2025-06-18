@@ -276,7 +276,6 @@ router.post('/create', async (req, res) => {
   }
 });
 
-// Auto-generate commission when student application is accepted
 router.post('/auto-generate', async (req, res) => {
   try {
     const { studentId, applicationId } = req.body;

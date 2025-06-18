@@ -54,7 +54,6 @@ const getAllAgents = async (req, res) => {
       return res.status(404).json({ success: false, message: "No agents found." });
     }
 
-    // Format response: optionally remove sensitive fields like password
     const formattedAgents = agents.map(({ password, resetPasswordToken, resetPasswordExpires, ...rest }) => rest);
 
     return res.status(200).json({
@@ -106,8 +105,6 @@ const getAgent = async (req, res) => {
   }
 };
 
-// Modified allStudents function for agent.controller.js
-
 const allStudents = async (req, res) => {
   const { agentId } = req.params;
 
@@ -147,13 +144,10 @@ const getTopAgents = async (req, res) => {
       });
     }
 
-    // Har agent ke liye application count calculate karein
     const agentsWithApplications = await Promise.all(
       agents.map(async (agent) => {
-        // Agent ke students find karein
         const students = await Student.find({ agentId: agent._id }).lean();
-        
-        // Total applications count karein
+
         let totalApplications = 0;
         let acceptedApplications = 0;
         let totalRevenue = 0;
@@ -161,8 +155,7 @@ const getTopAgents = async (req, res) => {
         students.forEach(student => {
           if (student.applications && student.applications.length > 0) {
             totalApplications += student.applications.length;
-            
-            // Accepted applications count karein
+
             const accepted = student.applications.filter(app => 
               app.status === "Accepted"
             ).length;
@@ -170,12 +163,10 @@ const getTopAgents = async (req, res) => {
           }
         });
 
-        // Success rate calculate karein
         const successRate = totalApplications > 0 
           ? Math.round((acceptedApplications / totalApplications) * 100)
           : 0;
 
-        // Revenue calculate karein (example: $2000 per accepted application)
         totalRevenue = acceptedApplications * 2000;
 
         return {
@@ -193,7 +184,6 @@ const getTopAgents = async (req, res) => {
       })
     );
 
-    // Applications ke base pe sort karein (descending order)
     const sortedAgents = agentsWithApplications
       .sort((a, b) => b.totalApplications - a.totalApplications)
       .slice(0, 2); // Top 2 agents
@@ -219,5 +209,5 @@ module.exports = {
   getAgent,
   allStudents,
   getAllAgents,
-  getTopAgents  // ← Ye add karein
+  getTopAgents
 };

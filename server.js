@@ -52,6 +52,11 @@ app.use('/api/commission', require('./src/routes/SuperAdmin/commission'));
 app.use("/api/password", require("./src/routes/SuperAdmin/passwordRoutes"));
 app.use("/api/auth", require("./src/routes/SuperAdmin/authRoutes"));
 app.use("/payment", require("./src/routes/SuperAdmin/paymentRoutes"));
+// app.use("/reports", require("./src/routes/SuperAdmin/reportsRoutes"));
+app.use("/api/reports", require("./src/routes/SuperAdmin/reportsRoutes"));
+console.log("Reports route type:", typeof reportsRoute);
+
+
 
 // --- SERVER ---
 const PORT = process.env.PORT || 5000;
