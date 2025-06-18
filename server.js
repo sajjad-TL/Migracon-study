@@ -55,6 +55,7 @@ app.use("/api/auth", require("./src/routes/SuperAdmin/authRoutes"));
 app.use("/payment", require("./src/routes/SuperAdmin/paymentRoutes"));
 app.use('/api/schools', require('./src/routes/SuperAdmin/schoolRoutes'));
 app.use('/api/programs', require('./src/routes/SuperAdmin/programRoutes'));
+app.use('/api/reports', require('./src/routes/SuperAdmin/reportsRoutes'));
 
 
 // --- SERVER ---
