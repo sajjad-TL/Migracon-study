@@ -1,14 +1,23 @@
+// src/routes/SuperAdmin/commission.js
 const express = require("express");
 const router = express.Router();
-// const reportController = require("../../controllers/SuperAdmin/reportController");
-const { createReport , getReports, getReportTrends } = require('../../controllers/SuperAdmin/reportController')
+const { 
+  getDashboardStats, 
+  getAgents, 
+  getPaidCommissions,
+  exportCommissionData 
+} = require('../../controllers/SuperAdmin/commissionController');
 
+// GET /api/commission/dashboard/stats
+router.get("/dashboard/stats", getDashboardStats);
 
-// POST /api/reports
-router.post("/createReport", createReport);
+// GET /api/commission/agents
+router.get("/agents", getAgents);
 
-// GET /api/reports?months=6
-router.get("/getReport", getReports);
-router.get('/trends', getReportTrends);
+// GET /api/commission/paid-commissions
+router.get("/paid-commissions", getPaidCommissions);
+
+// GET /api/commission/export
+router.get("/export", exportCommissionData);
 
 module.exports = router;
