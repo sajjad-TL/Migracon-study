@@ -1,63 +1,44 @@
 const Commission = require("../../models/SuperAdmin/Commission");
 const Agent = require("../../models/Agent/agent.model");
 const Student = require("../../models/Agent/student.model");
+const Agent = require("../../models/Agent/agent.model");
+const ExcelJS = require('exceljs');
 
 // Get dashboard statistics
 const getDashboardStats = async (req, res) => {
   try {
     const currentDate = new Date();
-    const currentMonth = currentDate.getMonth() + 1; // JavaScript months are 0-indexed
-    const currentYear = currentDate.getFullYear();
-    const lastMonth = currentMonth === 1 ? 12 : currentMonth - 1;
-    const lastMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+    const month = getMonthString(currentDate);
+    const year = currentDate.getFullYear();
 
-    // Total Commission (all time)
-    const totalCommissionResult = await Commission.aggregate([
-      { $group: { _id: null, total: { $sum: "$amount" } } }
+    const startOfMonth = new Date(year, currentDate.getMonth(), 1);
+    const endOfMonth = new Date(year, currentDate.getMonth() + 1, 0);
+
+    const applicationsThisMonth = await Student.aggregate([
+      { $unwind: "$applications" },
+      {
+        $match: {
+          "applications.createdAt": {
+            $gte: startOfMonth,
+            $lte: endOfMonth
+          }
+        }
+      }
     ]);
-    const totalCommission = totalCommissionResult[0]?.total || 0;
 
-    // Pending Payouts
-    const pendingCommissions = await Commission.find({ status: 'Pending' });
-    const pendingPayouts = pendingCommissions.reduce((sum, comm) => sum + comm.amount, 0);
-    const pendingRequestsCount = pendingCommissions.length;
+    const monthlyApplications = applicationsThisMonth.length;
 
-    // 🔥 FIXED: Paid This Month - Current month ke saare paid commissions
-    const paidCommissions = await Commission.find({
-      status: 'Paid',
-      $expr: {
-        $and: [
-          { $eq: [{ $month: "$paidDate" }, currentMonth] },
-          { $eq: [{ $year: "$paidDate" }, currentYear] }
-        ]
-      }
+    const commissionsThisMonth = await Commission.find({
+      month,
+      year,
+      status: 'Approved'
     });
 
-    const paidThisMonth = paidCommissions.reduce((sum, comm) => sum + comm.amount, 0);
-    const paymentsProcessedCount = paidCommissions.length;
+    const monthlyRevenue = commissionsThisMonth.reduce((acc, c) => acc + c.amount, 0);
+    const activeAgents = await Agent.countDocuments();
 
-    // Last month paid amount for growth calculation
-    const lastMonthPaid = await Commission.find({
-      status: 'Paid',
-      $expr: {
-        $and: [
-          { $eq: [{ $month: "$paidDate" }, lastMonth] },
-          { $eq: [{ $year: "$paidDate" }, lastMonthYear] }
-        ]
-      }
-    });
-    const lastMonthPaidAmount = lastMonthPaid.reduce((sum, comm) => sum + comm.amount, 0);
-
-    // Commission Growth Percent
-    let commissionGrowthPercent = 0;
-    if (lastMonthPaidAmount > 0) {
-      commissionGrowthPercent = ((paidThisMonth - lastMonthPaidAmount) / lastMonthPaidAmount * 100).toFixed(1);
-    } else if (paidThisMonth > 0) {
-      commissionGrowthPercent = 100; // First month with payments
-    }
-
-    // Active Agents
-    const activeAgents = await Agent.countDocuments({ status: 'Active' });
+    const totalApplications = await Student.aggregate([{ $unwind: "$applications" }]);
+    const approvedApplications = totalApplications.filter(app => app.applications.status === "Accepted");
 
     const dashboardStats = {
       totalCommission,
@@ -191,34 +172,16 @@ const getAgents = async (req, res) => {
 // Get paid commissions for specific month
 const getPaidCommissions = async (req, res) => {
   try {
-    const { month, year } = req.query;
-    const currentDate = new Date();
-    const targetMonth = month ? parseInt(month) : currentDate.getMonth() + 1;
-    const targetYear = year ? parseInt(year) : currentDate.getFullYear();
-
-    const paidCommissions = await Commission.find({
-      status: 'Paid',
-      $expr: {
-        $and: [
-          { $eq: [{ $month: "$paidDate" }, targetMonth] },
-          { $eq: [{ $year: "$paidDate" }, targetYear] }
-        ]
-      }
-    }).populate('agentId', 'firstName lastName email');
-
-    res.status(200).json(paidCommissions);
-
-  } catch (error) {
-    console.error('Get paid commissions error:', error);
-    res.status(500).json({ 
-      message: 'Failed to fetch paid commissions', 
-      error: error.message 
-    });
+    const reports = await Report.find().sort({ createdAt: -1 }).limit(6);
+    res.status(200).json(reports);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch reports", error: err.message });
   }
 };
 
-// Export commission data
-const exportCommissionData = async (req, res) => {
+// (Optional) Trend data endpoint
+const getReportTrends = async (req, res) => {
   try {
     const { type, agentId } = req.query;
 
@@ -252,9 +215,4 @@ const exportCommissionData = async (req, res) => {
   }
 };
 
-module.exports = {
-  getDashboardStats,
-  getAgents,
-  getPaidCommissions,
-  exportCommissionData
-};
+module.exports = { createReport, getReports, getReportTrends };
