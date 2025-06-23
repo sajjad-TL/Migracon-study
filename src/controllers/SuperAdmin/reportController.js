@@ -1,14 +1,11 @@
-// controllers/SuperAdmin/report.controller.js
-
-const Report = require("../../models/SuperAdmin/Reports");
 const Commission = require("../../models/SuperAdmin/Commission");
+const Agent = require("../../models/Agent/agent.model");
 const Student = require("../../models/Agent/student.model");
 const Agent = require("../../models/Agent/agent.model");
 const ExcelJS = require('exceljs');
 
-const getMonthString = (date) => date.toLocaleString('default', { month: 'short' });
-
-const createReport = async (req, res) => {
+// Get dashboard statistics
+const getDashboardStats = async (req, res) => {
   try {
     const currentDate = new Date();
     const month = getMonthString(currentDate);
@@ -42,6 +39,11 @@ const createReport = async (req, res) => {
         createdAt: { $gte: startOfMonth, $lte: endOfMonth },
         status: 'Approved'
       });
+    const commissionsThisMonth = await Commission.find({
+      month,
+      year,
+      status: 'Approved'
+    });
 
 
     const monthlyRevenue = commissionsThisMonth.reduce((acc, c) => acc + c.amount, 0);
@@ -50,274 +52,178 @@ const createReport = async (req, res) => {
     const totalApplications = await Student.aggregate([{ $unwind: "$applications" }]);
     const approvedApplications = totalApplications.filter(app => app.applications.status === "Accepted");
 
-    const successRate = totalApplications.length > 0
-      ? ((approvedApplications.length / totalApplications.length) * 100).toFixed(1)
-      : 0;
-
-    const processingTimes = applicationsThisMonth
-      .filter(app => app.applications.paymentDate && app.applications.applyDate)
-      .map(app => {
-        const applyDate = new Date(app.applications.applyDate);
-        const payDate = new Date(app.applications.paymentDate);
-        return (payDate - applyDate) / (1000 * 60 * 60 * 24);
-      });
-
-    const processingTimeDays = processingTimes.length
-      ? Math.round(processingTimes.reduce((a, b) => a + b, 0) / processingTimes.length)
-      : 0;
-
-    const countryStats = await Student.aggregate([
-      { $group: { _id: "$citizenOf", count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 3 }
-    ]);
-
-    const totalStudents = await Student.countDocuments();
-
-    const sourceCountries = countryStats.map(c => ({
-      country: c._id,
-      percentage: Math.round((c.count / totalStudents) * 100)
-    }));
-
-    const programStats = await Student.aggregate([
-      { $unwind: "$applications" },
-      {
-        $group: {
-          _id: {
-            program: "$applications.program",
-            institute: "$applications.institute"
-          },
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { count: -1 } },
-      { $limit: 2 }
-    ]);
-
-    const popularPrograms = programStats.map(p => ({
-      program: p._id.program,
-      university: p._id.institute,
-      applications: p.count
-    }));
-
-    const agentStats = await Student.aggregate([
-      { $unwind: "$applications" },
-      {
-        $lookup: {
-          from: "agents",
-          localField: "agentId",
-          foreignField: "_id",
-          as: "agent"
-        }
-      },
-      { $unwind: "$agent" },
-      {
-        $group: {
-          _id: {
-            agentId: "$agent._id",
-            name: { $concat: ["$agent.firstName", " ", "$agent.lastName"] }
-          },
-          applications: { $sum: 1 },
-          accepted: {
-            $sum: {
-              $cond: [{ $eq: ["$applications.status", "Accepted"] }, 1, 0]
-            }
-          }
-        }
-      },
-      { $sort: { applications: -1 } },
-      { $limit: 2 }
-    ]);
-
-    const topAgents = agentStats.map(a => ({
-      name: a._id.name,
-      applications: a.applications,
-      successRate: a.applications > 0 ? Math.round((a.accepted / a.applications) * 100) : 0,
-      avatar: ""
-    }));
-
-    const report = new Report({
-      month,
-      year,
-      monthlyApplications,
-      monthlyRevenue,
+    const dashboardStats = {
+      totalCommission,
+      pendingPayouts,
+      pendingRequestsCount,
+      paidThisMonth, // ✅ This will now show current month total
+      paymentsProcessedCount,
       activeAgents,
-      successRate,
-      chartValue: monthlyApplications,
-      totalApplications: totalApplications.length,
-      approvalRate: successRate,
-      processingTimeDays,
-      sourceCountries,
-      popularPrograms,
-      topAgents
-    });
+      commissionGrowthPercent: parseFloat(commissionGrowthPercent)
+    };
 
-    await report.save();
-    res.status(201).json({ message: "Report generated and saved", report });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Error generating report", error: err.message });
+    console.log('Dashboard Stats:', dashboardStats);
+    res.status(200).json(dashboardStats);
+
+  } catch (error) {
+    console.error('Dashboard stats error:', error);
+    res.status(500).json({ 
+      message: 'Failed to fetch dashboard statistics', 
+      error: error.message 
+    });
   }
 };
 
-const getReports = async (req, res) => {
+// Get agents with commission data
+const getAgents = async (req, res) => {
   try {
-    const { range } = req.query;
+    const { page = 1, limit = 10, search = '', country = '' } = req.query;
 
-    const allReports = await Report.find({});
-
-    const sortedReports = allReports.sort((a, b) => {
-      const dateA = new Date(`${a.month} 1, ${a.year}`);
-      const dateB = new Date(`${b.month} 1, ${b.year}`);
-      return dateA - dateB; // ascending
-    });
-
-    let filteredReports = [];
-
-    if (range === '1m') {
-      const latest = sortedReports[sortedReports.length - 1];
-      if (latest) filteredReports = [latest]; 
-    } else {
-      let monthsToSubtract = 6;
-      if (range === '3m') monthsToSubtract = 3;
-
-      const now = new Date();
-      const startDate = new Date(now.getFullYear(), now.getMonth() - monthsToSubtract + 1, 1);
-
-      filteredReports = sortedReports.filter(r => {
-        const reportDate = new Date(`${r.month} 1, ${r.year}`);
-        return reportDate >= startDate;
-      });
+    // Build filter
+    const filter = {};
+    if (search) {
+      filter.$or = [
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } }
+      ];
+    }
+    if (country) {
+      filter.country = country;
     }
 
-    res.status(200).json(filteredReports);
+    // Get agents with pagination
+    const agents = await Agent.find(filter)
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .select('firstName lastName email country status createdAt');
+
+    const totalAgents = await Agent.countDocuments(filter);
+    const totalPages = Math.ceil(totalAgents / limit);
+
+    // Get commission data for each agent
+    const agentsWithCommissions = await Promise.all(
+      agents.map(async (agent) => {
+        // Total commission for this agent
+        const totalCommissionResult = await Commission.aggregate([
+          { $match: { agentId: agent._id } },
+          { $group: { _id: null, total: { $sum: "$amount" } } }
+        ]);
+        const totalCommission = totalCommissionResult[0]?.total || 0;
+
+        // This month commission
+        const currentDate = new Date();
+        const thisMonthCommissions = await Commission.find({
+          agentId: agent._id,
+          $expr: {
+            $and: [
+              { $eq: [{ $month: "$createdAt" }, currentDate.getMonth() + 1] },
+              { $eq: [{ $year: "$createdAt" }, currentDate.getFullYear()] }
+            ]
+          }
+        });
+        const thisMonth = thisMonthCommissions.reduce((sum, comm) => sum + comm.amount, 0);
+
+        // Pending amount
+        const pendingCommissions = await Commission.find({
+          agentId: agent._id,
+          status: 'Pending'
+        });
+        const pendingAmount = pendingCommissions.reduce((sum, comm) => sum + comm.amount, 0);
+        const pendingRequests = pendingCommissions.length;
+
+        // Applications count
+        const studentApplications = await Student.aggregate([
+          { $match: { agentId: agent._id } },
+          { $unwind: "$applications" },
+          { $group: { 
+            _id: null, 
+            total: { $sum: 1 },
+            successful: { 
+              $sum: { 
+                $cond: [{ $eq: ["$applications.status", "Accepted"] }, 1, 0] 
+              }
+            }
+          }}
+        ]);
+        
+        const applications = studentApplications[0]?.total || 0;
+        const successful = studentApplications[0]?.successful || 0;
+
+        return {
+          id: agent._id,
+          name: `${agent.firstName} ${agent.lastName}`,
+          country: agent.country,
+          totalCommission,
+          thisMonth,
+          pendingAmount,
+          pendingRequests,
+          applications,
+          successful,
+          status: agent.status
+        };
+      })
+    );
+
+    res.status(200).json({
+      agents: agentsWithCommissions,
+      totalAgents,
+      totalPages,
+      currentPage: parseInt(page)
+    });
+
+  } catch (error) {
+    console.error('Get agents error:', error);
+    res.status(500).json({ 
+      message: 'Failed to fetch agents', 
+      error: error.message 
+    });
+  }
+};
+
+// Get paid commissions for specific month
+const getPaidCommissions = async (req, res) => {
+  try {
+    const reports = await Report.find().sort({ createdAt: -1 }).limit(6);
+    res.status(200).json(reports);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to fetch reports", error: err.message });
   }
 };
 
+// (Optional) Trend data endpoint
 const getReportTrends = async (req, res) => {
   try {
-    const reports = await Report.find().sort({ createdAt: -1 }).limit(6);
-    const trends = reports.reverse().map(r => ({
-      name: `${r.month} ${r.year}`,
-      value: r.chartValue
-    }));
-    res.status(200).json(trends);
-  } catch (err) {
-    res.status(500).json({ message: "Error fetching trends", error: err.message });
-  }
-};
+    const { type, agentId } = req.query;
 
-const exportExcelReport = async (req, res) => {
-  try {
-    const { range } = req.query;
+    let data = [];
+    
+    if (type === 'commissions') {
+      const filter = agentId ? { agentId } : {};
+      
+      const commissions = await Commission.find(filter)
+        .populate('agentId', 'firstName lastName email')
+        .sort({ createdAt: -1 });
 
-    const allReports = await Report.find({});
+      data = commissions.map(comm => ({
+        'Agent Name': comm.agentId ? `${comm.agentId.firstName} ${comm.agentId.lastName}` : 'N/A',
+        'Agent Email': comm.agentId?.email || 'N/A',
+        'Amount': comm.amount,
+        'Status': comm.status,
+        'Created Date': comm.createdAt.toISOString().split('T')[0],
+        'Paid Date': comm.paidDate ? comm.paidDate.toISOString().split('T')[0] : 'N/A'
+      }));
+    }
 
-    const sortedReports = allReports.sort((a, b) => {
-      const dateA = new Date(`${a.month} 1, ${a.year}`);
-      const dateB = new Date(`${b.month} 1, ${b.year}`);
-      return dateA - dateB;
+    res.status(200).json({ data });
+
+  } catch (error) {
+    console.error('Export data error:', error);
+    res.status(500).json({ 
+      message: 'Failed to export data', 
+      error: error.message 
     });
-
-    let reportsToExport = [];
-
-    if (range === '1m') {
-      const latest = sortedReports[sortedReports.length - 1];
-      if (latest) reportsToExport = [latest];
-    } else {
-      let monthsToSubtract = 6;
-      if (range === '3m') monthsToSubtract = 3;
-
-      const now = new Date();
-      const startDate = new Date(now.getFullYear(), now.getMonth() - monthsToSubtract + 1, 1);
-
-      reportsToExport = sortedReports.filter(r => {
-        const reportDate = new Date(`${r.month} 1, ${r.year}`);
-        return reportDate >= startDate;
-      });
-    }
-
-    if (!reportsToExport.length) {
-      return res.status(404).json({ message: "No report data found for export" });
-    }
-
-    const workbook = new ExcelJS.Workbook();
-
-    for (const report of reportsToExport) {
-      const worksheet = workbook.addWorksheet(`${report.month} ${report.year}`);
-
-      worksheet.addRow(['Report Summary']);
-      worksheet.addRow([]);
-
-      worksheet.addRow([
-        'Month',
-        'Year',
-        'Monthly Applications',
-        'Monthly Revenue',
-        'Active Agents',
-        'Success Rate (%)',
-        'Total Applications',
-        'Approval Rate (%)',
-        'Avg Processing Time (days)'
-      ]);
-
-      worksheet.addRow([
-        report.month,
-        report.year,
-        report.monthlyApplications,
-        report.monthlyRevenue,
-        report.activeAgents,
-        report.successRate,
-        report.totalApplications,
-        report.approvalRate,
-        report.processingTimeDays
-      ]);
-      worksheet.addRow([]);
-
-      worksheet.addRow(['Top Source Countries']);
-      worksheet.addRow(['Country', 'Percentage (%)']);
-      report.sourceCountries.forEach(c =>
-        worksheet.addRow([c.country, c.percentage])
-      );
-      worksheet.addRow([]);
-
-      worksheet.addRow(['Popular Programs']);
-      worksheet.addRow(['Program', 'University', 'Applications']);
-      report.popularPrograms.forEach(p =>
-        worksheet.addRow([p.program, p.university, p.applications])
-      );
-      worksheet.addRow([]);
-
-      worksheet.addRow(['Top Performing Agents']);
-      worksheet.addRow(['Agent Name', 'Applications', 'Success Rate (%)']);
-      report.topAgents.forEach(a =>
-        worksheet.addRow([a.name, a.applications, a.successRate])
-      );
-
-      // Formatting
-      worksheet.getRow(1).font = { bold: true, size: 14 };
-      worksheet.columns.forEach(col => {
-        col.width = 25;
-      });
-    }
-
-    res.setHeader(
-      'Content-Type',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    );
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename=report_${range || 'all'}.xlsx`
-    );
-
-    await workbook.xlsx.write(res);
-    res.end();
-  } catch (err) {
-    console.error('Export error:', err);
-    res.status(500).json({ message: 'Failed to export reports', error: err.message });
   }
 };
 
