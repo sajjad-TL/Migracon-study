@@ -6,12 +6,8 @@ const { createReport , getReports, getReportTrends, exportExcelReport, regenerat
 // GET /api/commission/dashboard/stats
 router.get("/dashboard/stats", getDashboardStats);
 
-<<<<<<< HEAD
-router.post("/createReport", createReport);
-=======
 // GET /api/commission/agents
 router.get("/agents", getAgents);
->>>>>>> 2f9e3af71c59c533213cfeee57cbef4ba2134a2c
 
 // GET /api/reports?months=6
 router.get("/getReport", getReports);

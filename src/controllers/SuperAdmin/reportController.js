@@ -39,11 +39,6 @@ const getDashboardStats = async (req, res) => {
         createdAt: { $gte: startOfMonth, $lte: endOfMonth },
         status: 'Approved'
       });
-    const commissionsThisMonth = await Commission.find({
-      month,
-      year,
-      status: 'Approved'
-    });
 
 
     const monthlyRevenue = commissionsThisMonth.reduce((acc, c) => acc + c.amount, 0);
