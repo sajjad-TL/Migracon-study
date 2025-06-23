@@ -37,7 +37,7 @@ const ReportSchema = new mongoose.Schema({
     },
   ],
 }, {
-  timestamps: true // ✅ This enables createdAt & updatedAt
+  timestamps: true 
 });
 
 

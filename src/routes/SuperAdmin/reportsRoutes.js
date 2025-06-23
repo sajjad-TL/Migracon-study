@@ -1,15 +1,14 @@
 const express = require("express");
 const router = express.Router();
-// const reportController = require("../../controllers/SuperAdmin/reportController");
-const { createReport , getReports, getReportTrends, exportExcelReport } = require('../../controllers/SuperAdmin/reportController')
+const { createReport , getReports, getReportTrends, exportExcelReport, regenerateReport } = require('../../controllers/SuperAdmin/reportController')
 
 
-// POST /api/reports
 router.post("/createReport", createReport);
 
 // GET /api/reports?months=6
 router.get("/getReport", getReports);
 router.get('/trends', getReportTrends);
 router.get('/exportExcel', exportExcelReport);
+router.post('/regenerateReport', regenerateReport)
 
 module.exports = router;
