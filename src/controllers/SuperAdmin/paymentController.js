@@ -92,39 +92,41 @@ const getAllPayments = async (req, res) => {
   }
 };
 
+
 const updatePaymentStatus = async (req, res) => {
   try {
-    const { paymentId } = req.params;
+    const { id } = req.params;
     const { status } = req.body;
 
-    const allowedStatuses = ['Pending', 'Processing', 'Completed', 'Rejected'];
+    const allowedStatuses = ['Pending', 'Processing', 'Completed'];
     if (!allowedStatuses.includes(status)) {
-      return res.status(400).json({ error: 'Invalid status provided' });
+      return res.status(400).json({ error: 'Invalid status value' });
     }
 
-    const updatedPayment = await Payment.findByIdAndUpdate(
-      paymentId,
+    const updated = await Payment.findByIdAndUpdate(
+      id,
       { status },
       { new: true }
     );
 
-    if (!updatedPayment) {
+    if (!updated) {
       return res.status(404).json({ error: 'Payment not found' });
     }
 
-    res.status(200).json(updatedPayment);
+    res.status(200).json(updated);
   } catch (error) {
     console.error('Error updating payment status:', error);
     res.status(500).json({ error: 'Failed to update payment status' });
   }
 };
+
+// ✅ Delete payment
 const deletePayment = async (req, res) => {
   try {
-    const { paymentId } = req.params;
+    const { id } = req.params;
+    const deleted = await Payment.findByIdAndDelete(id);
 
-    const deletedPayment = await Payment.findByIdAndDelete(paymentId);
-
-    if (!deletedPayment) {
+    if (!deleted) {
       return res.status(404).json({ error: 'Payment not found' });
     }
 
@@ -135,11 +137,12 @@ const deletePayment = async (req, res) => {
   }
 };
 
+
 module.exports = {
   createPayment,
   getPaymentsByAgent,
   getLatestPaymentByAgent, 
   getAllPayments,
-  updatePaymentStatus,
+  updatePaymentStatus,  // ✅ include this
   deletePayment
 };

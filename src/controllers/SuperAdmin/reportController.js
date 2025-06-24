@@ -31,10 +31,18 @@ const createReport = async (req, res) => {
 
     const monthlyApplications = applicationsThisMonth.length;
 
-    const commissionsThisMonth = await Commission.find({
-      createdAt: { $gte: startOfMonth, $lte: endOfMonth },
-      status: 'Approved'
-    });
+  // Ensure any 'Paid' commissions are marked as 'Approved' (if business logic allows)
+      await Commission.updateMany(
+        { status: 'Paid', createdAt: { $gte: startOfMonth, $lte: endOfMonth } },
+        { $set: { status: 'Approved' } }
+      );
+
+      // Now fetch only Approved commissions
+      const commissionsThisMonth = await Commission.find({
+        createdAt: { $gte: startOfMonth, $lte: endOfMonth },
+        status: 'Approved'
+      });
+
 
     const monthlyRevenue = commissionsThisMonth.reduce((acc, c) => acc + c.amount, 0);
     const activeAgents = await Agent.countDocuments();
@@ -314,5 +322,24 @@ const exportExcelReport = async (req, res) => {
 };
 
 
+const regenerateReport = async (req, res) => {
+  try {
+    const currentDate = new Date();
+    const month = getMonthString(currentDate);
+    const year = currentDate.getFullYear();
 
-module.exports = { createReport, getReports, getReportTrends, exportExcelReport };
+    // Remove existing report for the current month
+    await Report.deleteOne({ month, year });
+
+    // Run normal report generation
+    await createReport(req, res);
+  } catch (err) {
+    console.error('Regeneration error:', err);
+    res.status(500).json({ message: "Failed to regenerate report", error: err.message });
+  }
+};
+
+
+
+
+module.exports = { createReport, getReports, getReportTrends, exportExcelReport, regenerateReport };

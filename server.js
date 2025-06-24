@@ -38,7 +38,7 @@ app.use(cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-// ✅ CORRECT - this is where multer is saving files
+
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const connectDB = require("./src/config/Agent/db");
@@ -48,7 +48,7 @@ app.use("/api/other-auth", require("./src/routes/Agent/auth.routes"));
 app.use("/student", require("./src/routes/Agent/student.routes"));
 app.use("/agent", require("./src/routes/Agent/agent.routes"));
 app.use("/notification", require("./src/routes/Agent/notificationPreferences.routes"));
-app.use('/api/commission', require('./src/routes/SuperAdmin/commission'));
+app.use('/api/commission', require('./src/controllers/SuperAdmin/commissionController'));
 
 app.use("/api/password", require("./src/routes/SuperAdmin/passwordRoutes"));
 app.use("/api/auth", require("./src/routes/SuperAdmin/authRoutes"));

@@ -37,19 +37,36 @@ router.get('/dashboard/stats', async (req, res) => {
     const pendingRequestsCount = await PaymentRequest.countDocuments({ status: 'Pending' });
 
     // Paid This Month - using date range for better accuracy
-    const paidThisMonthResult = await Commission.aggregate([
-      { 
-        $match: { 
-          status: 'Paid',
-          paidDate: {
-            $gte: startOfMonth,
-            $lte: endOfMonth
-          }
-        } 
-      },
-      { $group: { _id: null, total: { $sum: '$amount' } } }
-    ]);
-    const paidThisMonth = paidThisMonthResult[0]?.total || 0;
+// Try with paidDate first
+let paidThisMonth = 0;
+
+const paidThisMonthWithPaidDate = await Commission.aggregate([
+  {
+    $match: {
+      status: 'Paid',
+      paidDate: { $gte: startOfMonth, $lte: endOfMonth }
+    }
+  },
+  { $group: { _id: null, total: { $sum: '$amount' } } }
+]);
+
+if (paidThisMonthWithPaidDate.length > 0) {
+  paidThisMonth = paidThisMonthWithPaidDate[0].total;
+} else {
+  // fallback: use createdAt if paidDate missing
+  const paidThisMonthFallback = await Commission.aggregate([
+    {
+      $match: {
+        status: 'Paid',
+        createdAt: { $gte: startOfMonth, $lte: endOfMonth }
+      }
+    },
+    { $group: { _id: null, total: { $sum: '$amount' } } }
+  ]);
+  paidThisMonth = paidThisMonthFallback[0]?.total || 0;
+}
+
+
 
     // Count of payments processed this month
     const paymentsProcessedCount = await Commission.countDocuments({
@@ -221,6 +238,7 @@ router.get('/agents', async (req, res) => {
         return {
           id: agent._id,
           name: `${agent.firstName} ${agent.lastName}`,
+          phone: agent.phone || '',
           country: agent.country || 'Not specified',
           totalCommission,
           thisMonth,
