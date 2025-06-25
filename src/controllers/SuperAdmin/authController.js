@@ -36,6 +36,14 @@ const loginAdmin = async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
+    const io = req.app.get("io");
+
+    console.log("📢 Emitting admin login notification...");
+    io.emit("notification", {
+      type: "admin_login",
+      message: `Admin ${email} logged in.`,
+    });
+
     // If password matches, send JWT token
     const token = jwt.sign({ email, role: 'admin', isSuperAdmin: true }, process.env.JWT_SECRET_ADMIN, { expiresIn: '1d' });
     res.json({ token, message: "Login successful" });
