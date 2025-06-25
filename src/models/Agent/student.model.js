@@ -10,7 +10,7 @@ const applicationSchema = new mongoose.Schema(
     startDate: { type: Date },
     status: {
       type: String,
-      enum: ["Active", "Inactive", "Pending", "Rejected","Accepted", "not-paid", "Paid", "Withdrawn" ],
+      enum: ["Active", "Inactive", "Pending", "Rejected", "Accepted", "not-paid", "Paid", "Withdrawn"],
       default: "Pending",
     },
     requirements: { type: String },
@@ -51,7 +51,7 @@ const studentSchema = new mongoose.Schema(
       type: String,
       required: true,
       validate: {
-        validator: function(v) {
+        validator: function (v) {
           return v && v.length >= 7;
         },
         message: "Phone number should be at least 7 characters"
@@ -74,20 +74,30 @@ const studentSchema = new mongoose.Schema(
 
     applications: [applicationSchema],
 
- documents: [
-  {
-    filename: {
-      type: String,
-      required: true
+    // Profile image field
+    profileImage: {
+      filename: String,
+      originalname: String,
+      mimetype: String,
+      path: String,
+      size: Number,
+      uploadedAt: Date
     },
-    originalname: String,
-    mimetype: String,
-    path: String,
-    size: Number,
-    uploadedAt: Date
-  }
-],
 
+    // Documents array for other files
+    documents: [
+      {
+        filename: {
+          type: String,
+          required: true
+        },
+        originalname: String,
+        mimetype: String,
+        path: String,
+        size: Number,
+        uploadedAt: Date
+      }
+    ],
 
     applicationCount: { type: Number, default: 0 },
   },

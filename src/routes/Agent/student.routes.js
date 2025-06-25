@@ -7,6 +7,7 @@ const {
   getStudent,
   deleteStudent,
   updateStudent,
+  updateProfileImage,
   newApplication,
   getAllApplications,
   getAllStudents,
@@ -15,6 +16,10 @@ const {
   uploadDocument,
   deleteDocument
 } = require("../../controllers/Agent/student.controller");
+
+// Profile image routes
+router.post('/add-new', upload.single('profileImage'), addNewStudent);
+router.patch('/update-profile-image/:studentId', upload.single('profileImage'), updateProfileImage);
 
 // Document routes - place these BEFORE the dynamic /:studentId route
 router.post('/upload-document/:studentId', upload.single('file'), uploadDocument);
@@ -27,7 +32,6 @@ router.patch('/:studentId/update-application/:applicationId', updateApplication)
 router.get("/latestApplications", getLatestApplications);
 
 // Student routes
-router.post("/add-new", addNewStudent);
 router.delete("/delete", deleteStudent);
 router.patch("/update-student", updateStudent);
 router.get("/getAllStudents", getAllStudents);

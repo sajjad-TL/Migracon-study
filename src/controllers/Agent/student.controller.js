@@ -1,8 +1,10 @@
 const Student = require("../../models/Agent/student.model");
 const mongoose = require("mongoose");
 const Agent = require("../../models/Agent/agent.model");
+const fs = require('fs');
+const path = require('path');
 
-// Add New Student
+// Add New Student with optional image upload
 const addNewStudent = async (req, res) => {
   const {
     firstName,
@@ -19,7 +21,7 @@ const addNewStudent = async (req, res) => {
     status,
     countryOfInterest,
     serviceOfInterest,
-    conditionsAccepted, // ye field controller mein hai
+    conditionsAccepted,
     agentId,
   } = req.body;
 
@@ -45,6 +47,19 @@ const addNewStudent = async (req, res) => {
       return res.status(400).json({ message: "Student already exists" });
     }
 
+    // Handle profile image upload
+    let profileImage = null;
+    if (req.file) {
+      profileImage = {
+        filename: req.file.filename,
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype,
+        path: req.file.path,
+        size: req.file.size,
+        uploadedAt: new Date()
+      };
+    }
+
     const newStudent = new Student({
       firstName,
       lastName,
@@ -60,8 +75,9 @@ const addNewStudent = async (req, res) => {
       status,
       countryOfInterest,
       serviceOfInterest,
-      termsAccepted: conditionsAccepted || true, // conditionsAccepted ko termsAccepted mein map kar diya
+      termsAccepted: conditionsAccepted || true,
       agentId,
+      profileImage: profileImage
     });
 
     await newStudent.save();
@@ -71,9 +87,18 @@ const addNewStudent = async (req, res) => {
       message: "Student created successfully",
       studentId: newStudent._id,
       assignedAgent: agentId,
+      profileImage: profileImage
     });
 
   } catch (error) {
+    // If there was an error and a file was uploaded, delete it
+    if (req.file) {
+      try {
+        await fs.promises.unlink(req.file.path);
+      } catch (unlinkError) {
+        console.error("Error deleting uploaded file:", unlinkError);
+      }
+    }
     console.error("Error adding student:", error);
     return res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -128,11 +153,33 @@ const deleteStudent = async (req, res) => {
   }
 
   try {
-    const deletedStudent = await Student.findByIdAndDelete(studentId);
+    const studentToDelete = await Student.findById(studentId);
 
-    if (!deletedStudent) {
+    if (!studentToDelete) {
       return res.status(404).json({ message: "Student not found" });
     }
+
+    // Delete profile image if exists
+    if (studentToDelete.profileImage && studentToDelete.profileImage.path) {
+      try {
+        await fs.promises.unlink(studentToDelete.profileImage.path);
+      } catch (fileError) {
+        console.error("Error deleting profile image:", fileError);
+      }
+    }
+
+    // Delete all documents
+    if (studentToDelete.documents && studentToDelete.documents.length > 0) {
+      for (const doc of studentToDelete.documents) {
+        try {
+          await fs.promises.unlink(doc.path);
+        } catch (fileError) {
+          console.error("Error deleting document:", fileError);
+        }
+      }
+    }
+
+    const deletedStudent = await Student.findByIdAndDelete(studentId);
 
     return res.status(200).json({ success: true, message: "Student deleted", student: deletedStudent });
 
@@ -150,7 +197,7 @@ const updateStudent = async (req, res) => {
     return res.status(400).json({ message: "Valid student ID is required" });
   }
 
-  // Agar conditionsAccepted aaya hai to usse termsAccepted mein convert kar do
+  // Convert conditionsAccepted to termsAccepted if present
   if (updateData.conditionsAccepted !== undefined) {
     updateData.termsAccepted = updateData.conditionsAccepted;
     delete updateData.conditionsAccepted;
@@ -171,6 +218,69 @@ const updateStudent = async (req, res) => {
 
   } catch (error) {
     console.error("Error updating student:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// Update Student Profile Image
+const updateProfileImage = async (req, res) => {
+  const { studentId } = req.params;
+
+  if (!studentId || !mongoose.Types.ObjectId.isValid(studentId)) {
+    return res.status(400).json({ message: "Valid student ID is required" });
+  }
+
+  if (!req.file) {
+    return res.status(400).json({ message: "No image file provided" });
+  }
+
+  try {
+    const student = await Student.findById(studentId);
+
+    if (!student) {
+      // Delete uploaded file if student not found
+      await fs.promises.unlink(req.file.path);
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    // Delete old profile image if exists
+    if (student.profileImage && student.profileImage.path) {
+      try {
+        await fs.promises.unlink(student.profileImage.path);
+      } catch (fileError) {
+        console.error("Error deleting old profile image:", fileError);
+      }
+    }
+
+    // Update with new profile image
+    const newProfileImage = {
+      filename: req.file.filename,
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      path: req.file.path,
+      size: req.file.size,
+      uploadedAt: new Date()
+    };
+
+    student.profileImage = newProfileImage;
+    await student.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile image updated successfully",
+      profileImage: newProfileImage
+    });
+
+  } catch (error) {
+    // Delete uploaded file on error
+    if (req.file) {
+      try {
+        await fs.promises.unlink(req.file.path);
+      } catch (unlinkError) {
+        console.error("Error deleting uploaded file:", unlinkError);
+      }
+    }
+    console.error("Error updating profile image:", error);
     return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
@@ -266,7 +376,6 @@ const updateApplication = async (req, res) => {
   }
 };
 
-
 const getAllApplications = async (req, res) => {
   try {
     const students = await Student.find().select("firstName lastName email applications").lean();
@@ -292,7 +401,6 @@ const getAllApplications = async (req, res) => {
     return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
 
 const getLatestApplications = async (req, res) => {
   try {
@@ -336,15 +444,14 @@ const uploadDocument = async (req, res) => {
       return res.status(400).json({ message: "No file uploaded" });
     }
 
- const documentMeta = {
-  filename: String(file.filename),  // Force string
-  originalname: file.originalname,
-  mimetype: file.mimetype,
-  path: file.path,
-  size: file.size,
-  uploadedAt: new Date()
-};
-
+    const documentMeta = {
+      filename: String(file.filename),
+      originalname: file.originalname,
+      mimetype: file.mimetype,
+      path: file.path,
+      size: file.size,
+      uploadedAt: new Date()
+    };
 
     const student = await Student.findByIdAndUpdate(
       studentId,
@@ -396,10 +503,6 @@ const deleteDocument = async (req, res) => {
     student.documents = student.documents.filter(doc => doc.filename !== filename);
     await student.save();
 
-    // Import fs and path at the top of the file if not already imported
-    const fs = require('fs');
-    const path = require('path');
-
     const filePath = path.resolve(document.path);
     console.log("Attempting to delete file at:", filePath);
 
@@ -437,6 +540,7 @@ module.exports = {
   getAllStudents,
   deleteStudent,
   updateStudent,
+  updateProfileImage,
   newApplication,
   updateApplication,
   getAllApplications,
