@@ -16,12 +16,16 @@ const server = http.createServer(app);
 // Setup Socket.IO
 const io = socketIo(server, {
   cors: {
-    origin: "*", // adjust in production
-    methods: ["GET", "POST"]
+    origin: "*", // In production, restrict to your frontend domain
+    methods: ["GET", "POST"],
   },
 });
 
-// Socket event connection
+// Attach io instance to app for global access
+app.set("io", io);
+
+
+// Socket connection events
 io.on("connection", (socket) => {
   console.log("✅ Socket connected:", socket.id);
 
@@ -29,18 +33,7 @@ io.on("connection", (socket) => {
     console.log("❌ Socket disconnected:", socket.id);
   });
 
-  // Send test notification after 3 seconds
-  setTimeout(() => {
-    io.emit("notification", {
-      type: "admin_login",
-      message: "🔥 Admin logged-in Successfully  "
-    });
-  }, 3000);
 });
-
-
-// Make `io` accessible in routes/controllers
-app.set("io", io);
 
 // --- CORS SETUP ---
 const allowedOrigins = [
@@ -69,7 +62,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// --- DB CONNECTION ---
+// --- DATABASE ---
 const connectDB = require("./src/config/Agent/db");
 connectDB();
 
@@ -85,6 +78,7 @@ app.use("/payment", require("./src/routes/SuperAdmin/paymentRoutes"));
 app.use("/api/schools", require("./src/routes/SuperAdmin/schoolRoutes"));
 app.use("/api/programs", require("./src/routes/SuperAdmin/programRoutes"));
 app.use("/api/reports", require("./src/routes/SuperAdmin/reportsRoutes"));
+app.use("/api/universities", require("./src/routes/SuperAdmin/universityRoutes"));
 
 // --- START SERVER ---
 const PORT = process.env.PORT || 5000;

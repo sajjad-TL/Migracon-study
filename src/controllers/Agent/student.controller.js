@@ -7,31 +7,18 @@ const path = require('path');
 // Add New Student with optional image upload
 const addNewStudent = async (req, res) => {
   const {
-    firstName,
-    lastName,
-    middleName,
-    citizenOf,
-    dateOfBirth,
-    passportNumber,
-    passportExpiryDate,
-    gender,
-    email,
-    phoneNumber,
-    referralSource,
-    status,
-    countryOfInterest,
-    serviceOfInterest,
-    conditionsAccepted,
-    agentId,
+    firstName, lastName, middleName, citizenOf, dateOfBirth,
+    passportNumber, passportExpiryDate, gender, email, phoneNumber,
+    referralSource, status, countryOfInterest, serviceOfInterest,
+    conditionsAccepted, agentId
   } = req.body;
 
-  if (
-    !firstName || !lastName || !dateOfBirth || !passportNumber || !passportExpiryDate ||
-    !gender || !email || !phoneNumber || !citizenOf
-  ) {
-    return res.status(400).json({
-      message: "Missing required fields: first name, last name, date of birth, passport details, gender, email, phone number, citizenship."
-    });
+  const io = req.app.get("io");
+  console.log("🔔 Inside addNewStudent - emitting notification");
+
+  if (!firstName || !lastName || !dateOfBirth || !passportNumber || !passportExpiryDate ||
+      !gender || !email || !phoneNumber || !citizenOf) {
+    return res.status(400).json({ message: "Missing required fields." });
   }
 
   if (!agentId || !mongoose.Types.ObjectId.isValid(agentId)) {
@@ -39,15 +26,9 @@ const addNewStudent = async (req, res) => {
   }
 
   try {
-    const existingStudent = await Student.findOne({
-      $or: [{ email }, { passportNumber }],
-    });
+    const existingStudent = await Student.findOne({ $or: [{ email }, { passportNumber }] });
+    if (existingStudent) return res.status(400).json({ message: "Student already exists" });
 
-    if (existingStudent) {
-      return res.status(400).json({ message: "Student already exists" });
-    }
-
-    // Handle profile image upload
     let profileImage = null;
     if (req.file) {
       profileImage = {
@@ -61,44 +42,30 @@ const addNewStudent = async (req, res) => {
     }
 
     const newStudent = new Student({
-      firstName,
-      lastName,
-      middleName,
-      citizenOf,
-      dateOfBirth,
-      passportNumber,
-      passportExpiryDate,
-      gender,
-      email,
-      phoneNumber,
-      referralSource,
-      status,
-      countryOfInterest,
-      serviceOfInterest,
+      firstName, lastName, middleName, citizenOf, dateOfBirth,
+      passportNumber, passportExpiryDate, gender, email, phoneNumber,
+      referralSource, status, countryOfInterest, serviceOfInterest,
       termsAccepted: conditionsAccepted || true,
-      agentId,
-      profileImage: profileImage
+      agentId, profileImage
     });
 
     await newStudent.save();
+
+    io.emit("notification", {
+      type: "student_added",
+      message: `Student ${firstName} ${lastName} was added.`
+    });
 
     return res.status(201).json({
       success: true,
       message: "Student created successfully",
       studentId: newStudent._id,
       assignedAgent: agentId,
-      profileImage: profileImage
+      profileImage
     });
 
   } catch (error) {
-    // If there was an error and a file was uploaded, delete it
-    if (req.file) {
-      try {
-        await fs.promises.unlink(req.file.path);
-      } catch (unlinkError) {
-        console.error("Error deleting uploaded file:", unlinkError);
-      }
-    }
+    if (req.file) await fs.promises.unlink(req.file.path).catch(() => {});
     console.error("Error adding student:", error);
     return res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -107,20 +74,13 @@ const addNewStudent = async (req, res) => {
 // Get Single Student
 const getStudent = async (req, res) => {
   const { studentId } = req.params;
-
-  if (!studentId || !mongoose.Types.ObjectId.isValid(studentId)) {
+  if (!studentId || !mongoose.Types.ObjectId.isValid(studentId))
     return res.status(400).json({ message: "Valid student ID is required" });
-  }
 
   try {
     const student = await Student.findById(studentId).populate("agentId");
-
-    if (!student) {
-      return res.status(404).json({ message: "Student not found" });
-    }
-
+    if (!student) return res.status(404).json({ message: "Student not found" });
     return res.status(200).json({ success: true, student });
-
   } catch (error) {
     console.error("Error fetching student:", error);
     return res.status(500).json({ message: "Internal server error", error: error.message });
@@ -131,13 +91,10 @@ const getStudent = async (req, res) => {
 const getAllStudents = async (req, res) => {
   try {
     const students = await Student.find().sort({ createdAt: -1 }).populate("agentId");
-
     if (!students || students.length === 0) {
       return res.status(404).json({ success: false, message: "No students found" });
     }
-
     return res.status(200).json({ success: true, students });
-
   } catch (error) {
     console.error("Error fetching all students:", error);
     return res.status(500).json({ message: "Server error", error: error.message });
@@ -147,42 +104,31 @@ const getAllStudents = async (req, res) => {
 // Delete Student
 const deleteStudent = async (req, res) => {
   const { studentId } = req.body;
+  const io = req.app.get("io");
 
-  if (!studentId || !mongoose.Types.ObjectId.isValid(studentId)) {
+  if (!studentId || !mongoose.Types.ObjectId.isValid(studentId))
     return res.status(400).json({ message: "Valid studentId is required" });
-  }
 
   try {
     const studentToDelete = await Student.findById(studentId);
+    if (!studentToDelete) return res.status(404).json({ message: "Student not found" });
 
-    if (!studentToDelete) {
-      return res.status(404).json({ message: "Student not found" });
+    // Delete files
+    if (studentToDelete.profileImage?.path) {
+      await fs.promises.unlink(studentToDelete.profileImage.path).catch(() => {});
     }
-
-    // Delete profile image if exists
-    if (studentToDelete.profileImage && studentToDelete.profileImage.path) {
-      try {
-        await fs.promises.unlink(studentToDelete.profileImage.path);
-      } catch (fileError) {
-        console.error("Error deleting profile image:", fileError);
-      }
-    }
-
-    // Delete all documents
-    if (studentToDelete.documents && studentToDelete.documents.length > 0) {
-      for (const doc of studentToDelete.documents) {
-        try {
-          await fs.promises.unlink(doc.path);
-        } catch (fileError) {
-          console.error("Error deleting document:", fileError);
-        }
-      }
+    for (const doc of studentToDelete.documents || []) {
+      await fs.promises.unlink(doc.path).catch(() => {});
     }
 
     const deletedStudent = await Student.findByIdAndDelete(studentId);
 
-    return res.status(200).json({ success: true, message: "Student deleted", student: deletedStudent });
+    io.emit("notification", {
+      type: "student_deleted",
+      message: `Student ${studentToDelete.firstName} ${studentToDelete.lastName} was deleted.`,
+    });
 
+    return res.status(200).json({ success: true, message: "Student deleted", student: deletedStudent });
   } catch (error) {
     console.error("Error deleting student:", error);
     return res.status(500).json({ message: "Server error", error: error.message });
@@ -192,12 +138,13 @@ const deleteStudent = async (req, res) => {
 // Update Student
 const updateStudent = async (req, res) => {
   const { studentId, ...updateData } = req.body;
+  const io = req.app.get("io");
+  console.log("👀 Emitting student_added to all clients:", io.engine.clientsCount);
 
-  if (!studentId || !mongoose.Types.ObjectId.isValid(studentId)) {
+
+  if (!studentId || !mongoose.Types.ObjectId.isValid(studentId))
     return res.status(400).json({ message: "Valid student ID is required" });
-  }
 
-  // Convert conditionsAccepted to termsAccepted if present
   if (updateData.conditionsAccepted !== undefined) {
     updateData.termsAccepted = updateData.conditionsAccepted;
     delete updateData.conditionsAccepted;
@@ -209,13 +156,25 @@ const updateStudent = async (req, res) => {
       { $set: updateData },
       { new: true, runValidators: true }
     );
+    if (!updatedStudent) return res.status(404).json({ message: "Student not found" });
 
-    if (!updatedStudent) {
-      return res.status(404).json({ message: "Student not found" });
-    }
+
+    setTimeout(() => {
+  console.log("🔔 Emitting 'student_added' notification");
+  if (io.engine.clientsCount > 0) {
+io.emit("notification", {
+      type: "student_updated",
+      message: `Student ${updatedStudent.firstName} ${updatedStudent.lastName} was updated.`,
+    });
+  console.log(`🔔 Emitting 'student_added' notification to ${io.engine.clientsCount} clients`);
+} else {
+  console.log("⚠️ No clients connected, skipping emit");
+}
+}, 1000);
+
+    
 
     return res.status(200).json({ success: true, message: "Student updated", student: updatedStudent });
-
   } catch (error) {
     console.error("Error updating student:", error);
     return res.status(500).json({ message: "Server error", error: error.message });
@@ -225,34 +184,24 @@ const updateStudent = async (req, res) => {
 // Update Student Profile Image
 const updateProfileImage = async (req, res) => {
   const { studentId } = req.params;
+  const io = req.app.get("io");
 
-  if (!studentId || !mongoose.Types.ObjectId.isValid(studentId)) {
+  if (!studentId || !mongoose.Types.ObjectId.isValid(studentId))
     return res.status(400).json({ message: "Valid student ID is required" });
-  }
 
-  if (!req.file) {
-    return res.status(400).json({ message: "No image file provided" });
-  }
+  if (!req.file) return res.status(400).json({ message: "No image file provided" });
 
   try {
     const student = await Student.findById(studentId);
-
     if (!student) {
-      // Delete uploaded file if student not found
       await fs.promises.unlink(req.file.path);
       return res.status(404).json({ message: "Student not found" });
     }
 
-    // Delete old profile image if exists
-    if (student.profileImage && student.profileImage.path) {
-      try {
-        await fs.promises.unlink(student.profileImage.path);
-      } catch (fileError) {
-        console.error("Error deleting old profile image:", fileError);
-      }
+    if (student.profileImage?.path) {
+      await fs.promises.unlink(student.profileImage.path).catch(() => {});
     }
 
-    // Update with new profile image
     const newProfileImage = {
       filename: req.file.filename,
       originalname: req.file.originalname,
@@ -265,6 +214,11 @@ const updateProfileImage = async (req, res) => {
     student.profileImage = newProfileImage;
     await student.save();
 
+    io.emit("notification", {
+      type: "student_updated",
+      message: `Student ${student.firstName} ${student.lastName} profile image updated.`,
+    });
+
     return res.status(200).json({
       success: true,
       message: "Profile image updated successfully",
@@ -272,18 +226,12 @@ const updateProfileImage = async (req, res) => {
     });
 
   } catch (error) {
-    // Delete uploaded file on error
-    if (req.file) {
-      try {
-        await fs.promises.unlink(req.file.path);
-      } catch (unlinkError) {
-        console.error("Error deleting uploaded file:", unlinkError);
-      }
-    }
+    if (req.file) await fs.promises.unlink(req.file.path).catch(() => {});
     console.error("Error updating profile image:", error);
     return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 
 // Add New Application
 const newApplication = async (req, res) => {
