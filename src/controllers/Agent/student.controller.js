@@ -139,15 +139,23 @@ const deleteStudent = async (req, res) => {
 const updateStudent = async (req, res) => {
   const { studentId, ...updateData } = req.body;
   const io = req.app.get("io");
-  console.log("👀 Emitting student_added to all clients:", io.engine.clientsCount);
+  console.log("👀 Emitting student_updated to all clients:", io.engine.clientsCount);
 
-
-  if (!studentId || !mongoose.Types.ObjectId.isValid(studentId))
+  // Validate studentId
+  if (!studentId || !mongoose.Types.ObjectId.isValid(studentId)) {
     return res.status(400).json({ message: "Valid student ID is required" });
+  }
 
+  // Convert conditionsAccepted to termsAccepted if it exists
   if (updateData.conditionsAccepted !== undefined) {
     updateData.termsAccepted = updateData.conditionsAccepted;
     delete updateData.conditionsAccepted;
+  }
+
+  // 🛡️ IMPORTANT: Prevent overwriting applications accidentally
+  if ('applications' in updateData) {
+    console.warn("⚠️ Attempt to update applications through updateStudent blocked.");
+    delete updateData.applications;
   }
 
   try {
@@ -156,23 +164,23 @@ const updateStudent = async (req, res) => {
       { $set: updateData },
       { new: true, runValidators: true }
     );
-    if (!updatedStudent) return res.status(404).json({ message: "Student not found" });
 
+    if (!updatedStudent) {
+      return res.status(404).json({ message: "Student not found" });
+    }
 
+    // 🔔 Emit notification to connected clients
     setTimeout(() => {
-  console.log("🔔 Emitting 'student_added' notification");
-  if (io.engine.clientsCount > 0) {
-io.emit("notification", {
-      type: "student_updated",
-      message: `Student ${updatedStudent.firstName} ${updatedStudent.lastName} was updated.`,
-    });
-  console.log(`🔔 Emitting 'student_added' notification to ${io.engine.clientsCount} clients`);
-} else {
-  console.log("⚠️ No clients connected, skipping emit");
-}
-}, 1000);
-
-    
+      if (io.engine.clientsCount > 0) {
+        io.emit("notification", {
+          type: "student_updated",
+          message: `Student ${updatedStudent.firstName} ${updatedStudent.lastName} was updated.`,
+        });
+        console.log(`🔔 Emitting 'student_updated' to ${io.engine.clientsCount} clients`);
+      } else {
+        console.log("⚠️ No clients connected, skipping emit");
+      }
+    }, 1000);
 
     return res.status(200).json({ success: true, message: "Student updated", student: updatedStudent });
   } catch (error) {
@@ -180,6 +188,7 @@ io.emit("notification", {
     return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 
 // Update Student Profile Image
 const updateProfileImage = async (req, res) => {
