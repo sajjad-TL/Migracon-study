@@ -73,7 +73,27 @@ const sendEmailNotification = async (userId, notificationType, frequency) => {
   }
 };
 
+// DELETE: Delete a specific notification by ID
+const deleteNotification = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const deleted = await NotificationPreference.findByIdAndDelete(id);
+
+    if (!deleted) {
+      return res.status(404).json({ message: "Notification not found" });
+    }
+
+    return res.status(200).json({ message: "Notification deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting notification:", error);
+    return res.status(500).json({ error: "Failed to delete notification" });
+  }
+};
+
+
 module.exports = {
   saveNotificationPreferences,
   getNotificationPreferences,
+  deleteNotification
 };
