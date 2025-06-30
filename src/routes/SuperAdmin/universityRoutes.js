@@ -7,7 +7,11 @@ const {
   approveUniversity,
   suspendUniversity,
   deleteUniversity,
-  getRolePermissions
+  getRolePermissions,
+  getAllRoles,
+  createRole,
+  deleteRole,
+  updateRole
 } = require("../../controllers/SuperAdmin/universityController");
 
 router.post("/create", createUniversity);
@@ -17,5 +21,10 @@ router.patch("/:id/approve", approveUniversity);
 router.patch("/:id/suspend", suspendUniversity);
 router.delete("/:id", deleteUniversity);
 router.get("/role-permissions", getRolePermissions);
+
+router.get('/roles', getAllRoles);
+router.post('/roles/create', createRole);
+router.patch('/roles/:id', updateRole);
+router.delete('/roles/:id', deleteRole);
 
 module.exports = router;
