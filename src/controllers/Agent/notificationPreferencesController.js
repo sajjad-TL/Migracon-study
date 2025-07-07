@@ -1,11 +1,13 @@
 const NotificationPreference = require("../../models/Agent/NotificationPreference");
 const nodemailer = require("nodemailer");
-const User = require("../../models/Agent/agent.model"); // Agent model
+const User = require("../../models/Agent/agent.model");
 require("dotenv").config();
+
 
 // POST: Save Preferences
 const saveNotificationPreferences = async (req, res) => {
   const { userId, notificationType, emailFrequency, mobileNotifications } = req.body;
+  const io = req.app.get("io");
 
   try {
     const newPreference = new NotificationPreference({
@@ -14,7 +16,16 @@ const saveNotificationPreferences = async (req, res) => {
       emailFrequency,
       mobileNotifications,
     });
+
     await newPreference.save();
+    io.emit("notification", {
+      type: notificationType,
+      message: `New notification preference saved: ${notificationType}`,
+      userId,
+      emailFrequency,
+      mobileNotifications,
+      createdAt: new Date(),
+    });
 
     if (emailFrequency !== "Never") {
       sendEmailNotification(userId, notificationType, emailFrequency);
@@ -26,6 +37,7 @@ const saveNotificationPreferences = async (req, res) => {
     res.status(500).json({ error: `Failed to save preferences. ${error.message}` });
   }
 };
+
 
 // GET: Retrieve Preferences & Count by User ID (Unified)
 const getNotificationPreferences = async (req, res) => {

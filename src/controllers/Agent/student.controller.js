@@ -3,8 +3,42 @@ const mongoose = require("mongoose");
 const Agent = require("../../models/Agent/agent.model");
 const fs = require('fs');
 const path = require('path');
+const AgentNotification = require("./agentNotificationController"); // Adjust path as needed
 
-// Add New Student with optional image upload
+
+
+// Helper function to create notification
+const createNotification = async (io, userId, message, type) => {
+  try {
+    const notification = new AgentNotification({
+      userId,
+      message,
+      type,
+      isRead: false,
+      createdAt: new Date()
+    });
+    
+    await notification.save();
+
+    // Emit via Socket.IO
+    if (io) {
+      io.emit("notification", {
+        _id: notification._id,
+        userId,
+        message,
+        type,
+        isRead: false,
+        createdAt: notification.createdAt
+      });
+    }
+
+    return notification;
+  } catch (error) {
+    console.error("Error creating notification:", error);
+  }
+};
+
+// Add New Student with notification
 const addNewStudent = async (req, res) => {
   const {
     firstName, lastName, middleName, citizenOf, dateOfBirth,
@@ -14,10 +48,9 @@ const addNewStudent = async (req, res) => {
   } = req.body;
 
   const io = req.app.get("io");
-  console.log("🔔 Inside addNewStudent - emitting notification");
 
   if (!firstName || !lastName || !dateOfBirth || !passportNumber || !passportExpiryDate ||
-      !gender || !email || !phoneNumber || !citizenOf) {
+    !gender || !email || !phoneNumber || !citizenOf) {
     return res.status(400).json({ message: "Missing required fields." });
   }
 
@@ -51,10 +84,13 @@ const addNewStudent = async (req, res) => {
 
     await newStudent.save();
 
-    io.emit("notification", {
-      type: "student_added",
-      message: `Student ${firstName} ${lastName} was added.`
-    });
+    // ✅ Create notification in database + real-time emit
+    await createNotification(
+      io,
+      agentId,
+      `New student ${firstName} ${lastName} has been added successfully.`,
+      "Notes"
+    );
 
     return res.status(201).json({
       success: true,
@@ -65,7 +101,7 @@ const addNewStudent = async (req, res) => {
     });
 
   } catch (error) {
-    if (req.file) await fs.promises.unlink(req.file.path).catch(() => {});
+    if (req.file) await fs.promises.unlink(req.file.path).catch(() => { });
     console.error("Error adding student:", error);
     return res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -242,13 +278,15 @@ const updateProfileImage = async (req, res) => {
 };
 
 
-// Add New Application
+// Add New Application with notification
 const newApplication = async (req, res) => {
   const { studentId } = req.params;
   const {
     paymentDate, applyDate, program, institute, startDate,
     status, requirements, currentStage, requirementspartner
   } = req.body;
+
+  const io = req.app.get("io");
 
   if (!studentId || !mongoose.Types.ObjectId.isValid(studentId)) {
     return res.status(400).json({ message: "Valid student ID is required" });
@@ -294,13 +332,26 @@ const newApplication = async (req, res) => {
     student.applicationCount = student.applications.length;
     await student.save();
 
-    return res.status(200).json({ message: "Application added successfully" });
+    // ✅ Create notification in database + real-time emit
+    await createNotification(
+      io,
+      student.agentId,
+      `New application submitted by ${student.firstName} ${student.lastName} for ${program} at ${institute}.`,
+      "Updates"
+    );
+
+    return res.status(200).json({ 
+      success: true,
+      message: "Application added successfully",
+      applicationId: newApp.applicationId
+    });
 
   } catch (error) {
     console.error("Error adding application:", error);
     return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 
 // Update Application
 const updateApplication = async (req, res) => {
@@ -333,9 +384,13 @@ const updateApplication = async (req, res) => {
   }
 };
 
+
 const getAllApplications = async (req, res) => {
   try {
-    const students = await Student.find().select("firstName lastName email applications").lean();
+    const students = await Student.find()
+      .select("firstName lastName email phoneNumber dateOfBirth citizenOf applications agentId")
+      .populate("agentId", "name")
+      .lean();
 
     const allApplications = [];
 
@@ -346,6 +401,10 @@ const getAllApplications = async (req, res) => {
           firstName: student.firstName,
           lastName: student.lastName,
           email: student.email,
+          phoneNumber: student.phoneNumber,
+          dateOfBirth: student.dateOfBirth,
+          citizenOf: student.citizenOf,
+          agentName: student.agentId?.name || null,
           ...app,
         });
       });
@@ -358,6 +417,7 @@ const getAllApplications = async (req, res) => {
     return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 
 const getLatestApplications = async (req, res) => {
   try {
