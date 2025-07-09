@@ -1,3 +1,4 @@
+// ===== FIXED SERVER.JS =====
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
@@ -24,15 +25,19 @@ const io = socketIo(server, {
 // Attach io instance to app for global access
 app.set("io", io);
 
-
 // Socket connection events
 io.on("connection", (socket) => {
   console.log("✅ Socket connected:", socket.id);
 
+  // Join agent-specific room
+  socket.on("join-agent-room", (agentId) => {
+    socket.join(`agent-${agentId}`);
+    console.log(`🏠 Agent ${agentId} joined room: agent-${agentId}`);
+  });
+
   socket.on("disconnect", () => {
     console.log("❌ Socket disconnected:", socket.id);
   });
-
 });
 
 // --- CORS SETUP ---
