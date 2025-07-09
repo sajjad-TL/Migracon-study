@@ -272,8 +272,8 @@ router.post('/create-sample-data', async (req, res) => {
     const now = new Date();
     const sampleCommissions = [
       {
-        agentId: new mongoose.Types.ObjectId(), // Replace with actual agent ID
-        studentId: new mongoose.Types.ObjectId(), // Replace with actual student ID
+        agentId: new mongoose.Types.ObjectId(), 
+        studentId: new mongoose.Types.ObjectId(), 
         amount: 500,
         status: 'Paid',
         type: 'Application Fee',
@@ -387,15 +387,16 @@ router.get('/agent/:agentId', async (req, res) => {
     const totalCommissions = await Commission.countDocuments({ agentId });
 
     // Agent summary
-    const totalEarned = await Commission.aggregate([
-      { $match: { agentId: mongoose.Types.ObjectId(agentId), status: { $in: ['Approved', 'Paid'] } } },
-      { $group: { _id: null, total: { $sum: '$amount' } } }
-    ]);
+   const totalEarned = await Commission.aggregate([
+  { $match: { agentId: new mongoose.Types.ObjectId(agentId), status: { $in: ['Approved', 'Paid'] } } },
+  { $group: { _id: null, total: { $sum: '$amount' } } }
+]);
 
-    const pendingAmount = await Commission.aggregate([
-      { $match: { agentId: mongoose.Types.ObjectId(agentId), status: 'Approved' } },
-      { $group: { _id: null, total: { $sum: '$amount' } } }
-    ]);
+const pendingAmount = await Commission.aggregate([
+  { $match: { agentId: new mongoose.Types.ObjectId(agentId), status: 'Approved' } },
+  { $group: { _id: null, total: { $sum: '$amount' } } }
+]);
+
 
     res.json({
       agent: {

@@ -5,7 +5,9 @@ const {
   getAgent,
   allStudents,
   getAllAgents,
-  getTopAgents 
+  getTopAgents,
+  uploadDocument,
+  deleteDocument 
 } = require("../../controllers/Agent/agent.controller");
 
 const path = require("path");
@@ -29,5 +31,7 @@ router.get("/allagents/getAllAgents", getAllAgents);
 router.get("/top-agents", getTopAgents);
 router.get("/all-students/:agentId", allStudents);
 router.get("/:agentId", getAgent);
+router.post('/upload-document/:agentId', upload.single('file'), uploadDocument);
+router.delete("/agents/:agentId/documents/:filename", deleteDocument);
 
 module.exports = router;

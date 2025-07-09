@@ -1,5 +1,15 @@
 const mongoose = require("mongoose");
 
+const documentSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    fileUrl: { type: String, required: true },
+    uploadedAt: { type: Date, default: Date.now },
+    verified: { type: Boolean, default: false }
+  },
+  { _id: false }
+);
+
 const agentSchema = new mongoose.Schema(
   {
     firstName: { type: String, required: true },
@@ -16,6 +26,8 @@ const agentSchema = new mongoose.Schema(
     profilePicture: { type: String },
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Date },
+
+    documents: [documentSchema]
   },
   { timestamps: true }
 );

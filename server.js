@@ -80,6 +80,7 @@ app.use("/api/programs", require("./src/routes/SuperAdmin/programRoutes"));
 app.use("/api/reports", require("./src/routes/SuperAdmin/reportsRoutes"));
 app.use("/api/universities", require("./src/routes/SuperAdmin/universityRoutes"));
 app.use("/agent-notifications", require("./src/routes/Agent/agentNotification.routes"));
+app.use('/profilePictures', express.static(path.join(__dirname, 'profilePictures')));
 
 // --- START SERVER ---
 const PORT = process.env.PORT || 5000;
