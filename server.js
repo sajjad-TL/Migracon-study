@@ -74,6 +74,7 @@ connectDB();
 // --- ROUTES ---
 app.use("/api/other-auth", require("./src/routes/Agent/auth.routes"));
 app.use("/student", require("./src/routes/Agent/student.routes"));
+app.use("/api/review", require("./src/routes/Agent/review.routes"));
 app.use("/agent", require("./src/routes/Agent/agent.routes"));
 app.use("/notification", require("./src/routes/Agent/notificationPreferences.routes"));
 app.use("/api/commission", require("./src/controllers/SuperAdmin/commissionController"));
@@ -85,6 +86,7 @@ app.use("/api/programs", require("./src/routes/SuperAdmin/programRoutes"));
 app.use("/api/reports", require("./src/routes/SuperAdmin/reportsRoutes"));
 app.use("/api/universities", require("./src/routes/SuperAdmin/universityRoutes"));
 app.use("/agent-notifications", require("./src/routes/Agent/agentNotification.routes"));
+
 
 // --- START SERVER ---
 const PORT = process.env.PORT || 5000;
