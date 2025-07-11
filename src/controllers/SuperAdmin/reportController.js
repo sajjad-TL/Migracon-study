@@ -215,7 +215,6 @@ const exportExcelReport = async (req, res) => {
     const { range } = req.query;
 
     const allReports = await Report.find({});
-
     const sortedReports = allReports.sort((a, b) => {
       const dateA = new Date(`${a.month} 1, ${a.year}`);
       const dateB = new Date(`${b.month} 1, ${b.year}`);
@@ -245,9 +244,21 @@ const exportExcelReport = async (req, res) => {
     }
 
     const workbook = new ExcelJS.Workbook();
+    const usedSheetNames = new Set();
+
+    const getUniqueSheetName = (base) => {
+      let name = base;
+      let counter = 1;
+      while (usedSheetNames.has(name)) {
+        name = `${base} (${counter++})`;
+      }
+      usedSheetNames.add(name);
+      return name;
+    };
 
     for (const report of reportsToExport) {
-      const worksheet = workbook.addWorksheet(`${report.month} ${report.year}`);
+      const sheetName = getUniqueSheetName(`${report.month} ${report.year}`);
+      const worksheet = workbook.addWorksheet(sheetName);
 
       worksheet.addRow(['Report Summary']);
       worksheet.addRow([]);
@@ -262,7 +273,7 @@ const exportExcelReport = async (req, res) => {
         'Total Applications',
         'Approval Rate (%)',
         'Avg Processing Time (days)'
-      ]);
+      ]).font = { bold: true };
 
       worksheet.addRow([
         report.month,
@@ -275,29 +286,31 @@ const exportExcelReport = async (req, res) => {
         report.approvalRate,
         report.processingTimeDays
       ]);
+
       worksheet.addRow([]);
 
       worksheet.addRow(['Top Source Countries']);
-      worksheet.addRow(['Country', 'Percentage (%)']);
+      worksheet.addRow(['Country', 'Percentage (%)']).font = { bold: true };
       report.sourceCountries.forEach(c =>
         worksheet.addRow([c.country, c.percentage])
       );
+
       worksheet.addRow([]);
 
       worksheet.addRow(['Popular Programs']);
-      worksheet.addRow(['Program', 'University', 'Applications']);
+      worksheet.addRow(['Program', 'University', 'Applications']).font = { bold: true };
       report.popularPrograms.forEach(p =>
         worksheet.addRow([p.program, p.university, p.applications])
       );
+
       worksheet.addRow([]);
 
       worksheet.addRow(['Top Performing Agents']);
-      worksheet.addRow(['Agent Name', 'Applications', 'Success Rate (%)']);
+      worksheet.addRow(['Agent Name', 'Applications', 'Success Rate (%)']).font = { bold: true };
       report.topAgents.forEach(a =>
         worksheet.addRow([a.name, a.applications, a.successRate])
       );
 
-      // Formatting
       worksheet.getRow(1).font = { bold: true, size: 14 };
       worksheet.columns.forEach(col => {
         col.width = 25;
@@ -321,17 +334,13 @@ const exportExcelReport = async (req, res) => {
   }
 };
 
-
 const regenerateReport = async (req, res) => {
   try {
     const currentDate = new Date();
     const month = getMonthString(currentDate);
     const year = currentDate.getFullYear();
 
-    // Remove existing report for the current month
     await Report.deleteOne({ month, year });
-
-    // Run normal report generation
     await createReport(req, res);
   } catch (err) {
     console.error('Regeneration error:', err);
@@ -341,5 +350,10 @@ const regenerateReport = async (req, res) => {
 
 
 
-
-module.exports = { createReport, getReports, getReportTrends, exportExcelReport, regenerateReport };
+module.exports = { 
+  createReport, 
+  getReports, 
+  getReportTrends,
+  exportExcelReport,
+  regenerateReport
+ };
