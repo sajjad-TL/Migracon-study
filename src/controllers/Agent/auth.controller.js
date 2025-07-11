@@ -5,6 +5,7 @@ const Agent = require("../../models/Agent/agent.model");
 const sendEmail = require("../../utils/Agent/sendEmail");
 const { OAuth2Client } = require("google-auth-library");
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const AgentNotification = require('../../models/Agent/AgentNotification');
 
 // Register Agent
 const registerAgent = async (req, res) => {
@@ -39,6 +40,7 @@ const registerAgent = async (req, res) => {
 };
 
 // Login Agent
+
 const loginAgent = async (req, res) => {
   const { email, password } = req.body;
 
@@ -54,9 +56,43 @@ const loginAgent = async (req, res) => {
     if (!isPasswordValid)
       return res.status(401).json({ message: "Incorrect password" });
 
-    const token = jwt.sign({ agentId: agent._id }, process.env.JWT_SECRET_APPLYBOARD, {
-      expiresIn: "7d",
-    });
+    const token = jwt.sign(
+      { agentId: agent._id },
+      process.env.JWT_SECRET_APPLYBOARD,
+      { expiresIn: "7d" }
+    );
+
+    const io = req.app.get("io");
+    const room = `agent-${agent._id}`;
+
+    console.log("📤 Preparing to emit notification to:", room);
+    console.log("🏠 Agent joined room:", room);
+
+    // Wait 500ms to let frontend socket join the room
+    setTimeout(async () => {
+      // ✅ Emit to socket room
+      io.to(room).emit("notification", {
+        userId: agent._id.toString(),
+        message: "🎉 You have successfully logged in!",
+        type: "Login",
+        createdAt: new Date().toISOString(),
+        isRead: false,
+      });
+
+      // ✅ Save to database using correct model
+      try {
+        await AgentNotification.create({
+          userId: agent._id.toString(),
+          message: "🎉 You have successfully logged in!",
+          type: "Updates", // Or use "Login" if added to enum
+          isRead: false,
+        });
+
+        console.log("✅ Notification saved to DB");
+      } catch (err) {
+        console.error("❌ Failed to save notification to DB:", err.message);
+      }
+    }, 500);
 
     return res.status(200).json({
       agentId: agent._id,
@@ -65,10 +101,13 @@ const loginAgent = async (req, res) => {
       token,
     });
   } catch (error) {
-    console.error(error);
+    console.error("❌ Server error during login:", error.message);
     return res.status(500).json({ message: "Server error, try again later" });
   }
 };
+
+
+
 
 // Forgot Password (Send OTP)
 const forgotPassword = async (req, res) => {

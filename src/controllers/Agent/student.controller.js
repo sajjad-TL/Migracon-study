@@ -3,8 +3,8 @@ const mongoose = require("mongoose");
 const Agent = require("../../models/Agent/agent.model");
 const fs = require('fs');
 const path = require('path');
-const AgentNotification = require("./agentNotificationController"); // Adjust path as needed
-
+// const AgentNotification = require("./agentNotificationController"); 
+const AgentNotification = require("../../models/Agent/AgentNotification");
 
 
 // Helper function to create notification
@@ -206,17 +206,13 @@ const updateStudent = async (req, res) => {
     }
 
     // 🔔 Emit notification to connected clients
-    setTimeout(() => {
-      if (io.engine.clientsCount > 0) {
-        io.emit("notification", {
-          type: "student_updated",
-          message: `Student ${updatedStudent.firstName} ${updatedStudent.lastName} was updated.`,
-        });
-        console.log(`🔔 Emitting 'student_updated' to ${io.engine.clientsCount} clients`);
-      } else {
-        console.log("⚠️ No clients connected, skipping emit");
-      }
-    }, 1000);
+ await createNotification(
+  io,
+  updatedStudent.agentId,
+  `Student ${updatedStudent.firstName} ${updatedStudent.lastName} was updated.`,
+  "Updates"
+);
+
 
     return res.status(200).json({ success: true, message: "Student updated", student: updatedStudent });
   } catch (error) {

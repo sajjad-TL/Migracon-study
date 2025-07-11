@@ -2,18 +2,15 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
-// Define the upload directory (absolute path to /uploads)
 const uploadDir = path.join(__dirname, "../../uploads");
 
-// Create the uploads directory if it doesn't exist
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Configure Multer storage engine
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, uploadDir); // Save all files in the /uploads directory
+    cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
     const ext = path.extname(file.originalname).toLowerCase();
@@ -22,7 +19,6 @@ const storage = multer.diskStorage({
   }
 });
 
-// File filter to allow only specific file types
 const fileFilter = (req, file, cb) => {
   const ext = path.extname(file.originalname).toLowerCase();
   const allowedExtensions = [".pdf", ".docx", ".jpg", ".jpeg", ".png"];
@@ -40,11 +36,10 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Export configured multer middleware
 module.exports = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10 MB max
+    fileSize: 10 * 1024 * 1024
   }
 });
