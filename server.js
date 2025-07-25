@@ -71,6 +71,9 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const connectDB = require("./src/config/Agent/db");
 connectDB();
 
+
+
+
 // --- ROUTES ---
 app.use("/api/other-auth", require("./src/routes/Agent/auth.routes"));
 app.use("/student", require("./src/routes/Agent/student.routes"));
@@ -87,6 +90,8 @@ app.use("/api/reports", require("./src/routes/SuperAdmin/reportsRoutes"));
 app.use("/api/universities", require("./src/routes/SuperAdmin/universityRoutes"));
 app.use("/agent-notifications", require("./src/routes/Agent/agentNotification.routes"));
 app.use('/profilePictures', express.static(path.join(__dirname, 'profilePictures')));
+app.use('/api/users', require("./src/routes/SuperAdmin/userRoutes"));
+app.use('/api/study-programs', require("./src/routes/SuperAdmin/studyProgramsRoutes"));
 
 
 

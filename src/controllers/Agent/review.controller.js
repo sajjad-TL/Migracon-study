@@ -239,36 +239,36 @@ const updateApplicationStatus = async (req, res) => {
   const io = req.app.get("io");
 
   if (!studentId || !applicationId) {
-    return res.status(400).json({ 
-      success: false, 
-      message: "Student ID and Application ID are required" 
+    return res.status(400).json({
+      success: false,
+      message: "Student ID and Application ID are required"
     });
   }
 
   if (!status) {
-    return res.status(400).json({ 
-      success: false, 
-      message: "Status is required" 
+    return res.status(400).json({
+      success: false,
+      message: "Status is required"
     });
   }
 
   try {
     const student = await Student.findById(studentId);
     if (!student) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Student not found" 
+      return res.status(404).json({
+        success: false,
+        message: "Student not found"
       });
     }
 
     const applicationIndex = student.applications.findIndex(
-      app => app.applicationId === applicationId
+      (app) => app.applicationId === applicationId
     );
 
     if (applicationIndex === -1) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Application not found" 
+      return res.status(404).json({
+        success: false,
+        message: "Application not found"
       });
     }
 
@@ -282,7 +282,7 @@ const updateApplicationStatus = async (req, res) => {
 
     await student.save();
 
-    // Create notification
+    // ✅ Create notification
     await createNotification(
       io,
       student.agentId,
@@ -290,7 +290,7 @@ const updateApplicationStatus = async (req, res) => {
       "Updates"
     );
 
-    // Emit real-time update
+    // ✅ Emit real-time update
     if (io) {
       io.emit("application_status_updated", {
         studentId,
@@ -305,16 +305,16 @@ const updateApplicationStatus = async (req, res) => {
       message: "Application status updated successfully",
       application: student.applications[applicationIndex]
     });
-
   } catch (error) {
     console.error("Error updating application status:", error);
-    return res.status(500).json({ 
-      success: false, 
-      message: "Server error", 
-      error: error.message 
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message
     });
   }
 };
+
 
 // Bulk update application status
 const bulkUpdateApplicationStatus = async (req, res) => {

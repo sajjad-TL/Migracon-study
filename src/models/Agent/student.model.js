@@ -10,7 +10,7 @@ const applicationSchema = new mongoose.Schema(
     startDate: { type: Date },
     status: {
       type: String,
-      enum: ["Active", "Inactive", "Pending", "Rejected", "Accepted", "not-paid", "Paid", "Withdrawn"],
+      enum: ["Active", "Inactive", "Pending", "Rejected", "Accepted", "not-paid", "Paid", "Withdrawn", "Approved"],
       default: "Pending",
     },
     requirements: { type: String },
@@ -62,7 +62,7 @@ const studentSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["Pending", "In Progress", "Completed", "Rejected", "On Hold", "Active", "Inactive"],
+      enum: ["Pending", "In Progress", "Completed", "Rejected", "On Hold", "Active", "Inactive", "Approved"],
       default: "New",
     },
 

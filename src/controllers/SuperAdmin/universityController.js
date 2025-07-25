@@ -5,33 +5,118 @@ const Role = require("../../models/SuperAdmin/role");
 
 const createUniversity = async (req, res) => {
   try {
-    const { universityId, name, email, contactPerson, role } = req.body;
-    
-    // Generate university ID if not provided
-    const uniId = universityId || `UNI${Date.now()}`;
-    
-    const uni = new University({ 
-      universityId: uniId, 
-      name, 
-      email, 
-      contactPerson, 
+    const isDraft = req.query.draft === "true"; // 👈 check if it's a draft save
+
+    const {
+      name,
+      code,
+      website,
+      establishedYear,
+      type,
+      accreditationStatus,
+
+      country,
+      state,
+      city,
+      postalCode,
+      address,
+
+      mainPhone,
+      admissionsPhone,
+      mainEmail,
+      admissionsEmail,
+
+      adminFirstName,
+      adminLastName,
+      adminJobTitle,
+      adminDepartment,
+      adminEmail,
+      adminPhone,
+      adminUsername,
+      adminPassword,
+
+      acceptedTerms,
+      acceptedPrivacy,
+      acceptedCompliance,
+      role
+    } = req.body;
+
+    const universityId = `UNI${Date.now()}`;
+
+    const newUniversity = new University({
+      universityId,
+      name,
+      code,
+      website,
+      establishedYear,
+      type,
+      accreditationStatus,
+
+      country,
+      state,
+      city,
+      postalCode,
+      address,
+
+      mainPhone,
+      admissionsPhone,
+      mainEmail,
+      admissionsEmail,
+
+      adminFirstName,
+      adminLastName,
+      adminJobTitle,
+      adminDepartment,
+      adminEmail,
+      adminPhone,
+      adminUsername,
+      adminPassword,
+
+      acceptedTerms: acceptedTerms === "true",
+      acceptedPrivacy: acceptedPrivacy === "true",
+      acceptedCompliance: acceptedCompliance === "true",
+
       role: role || "Viewer",
-      status: "Pending"
+      status: isDraft ? "Draft" : "Pending", // 👈 set status conditionally
+
+      logoUrl: req.files?.logo?.[0]?.filename || "",
+      accreditationCertificateUrl: req.files?.accreditation?.[0]?.filename || "",
+      registrationDocumentsUrls: req.files?.registrationDocs?.map(file => file.filename) || []
     });
-    
-    await uni.save();
-    res.status(201).json({ success: true, university: uni });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+
+    await newUniversity.save();
+
+    res.status(201).json({
+      success: true,
+      message: isDraft
+        ? "University saved as draft successfully"
+        : "University created successfully",
+      university: newUniversity
+    });
+  } catch (error) {
+    console.error("Create university error:", error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
+
 const getAllUniversities = async (req, res) => {
   try {
-    const universities = await University.find().sort({ createdAt: -1 });
-    res.json(universities);
+    const universities = await University.find()
+      .populate('programs') // ✅ Populate linked programs
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      universities
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Error fetching universities:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch universities',
+      error: err.message
+    });
   }
 };
 
@@ -49,22 +134,81 @@ const getUniversityById = async (req, res) => {
 
 const updateUniversity = async (req, res) => {
   try {
-    const { name, email, contactPerson, role } = req.body;
-    const updated = await University.findByIdAndUpdate(
-      req.params.id, 
-      { name, email, contactPerson, role },
-      { new: true }
-    );
-    
-    if (!updated) {
-      return res.status(404).json({ success: false, error: "University not found" });
+    const universityId = req.params.id;
+
+    const updateData = {
+      name: req.body.name,
+      code: req.body.code,
+      website: req.body.website,
+      establishedYear: req.body.establishedYear,
+      type: req.body.type,
+      accreditationStatus: req.body.accreditationStatus,
+
+      country: req.body.country,
+      state: req.body.state,
+      city: req.body.city,
+      postalCode: req.body.postalCode,
+      address: req.body.address,
+
+      mainPhone: req.body.mainPhone,
+      admissionsPhone: req.body.admissionsPhone,
+      mainEmail: req.body.mainEmail,
+      admissionsEmail: req.body.admissionsEmail,
+
+      adminFirstName: req.body.adminFirstName,
+      adminLastName: req.body.adminLastName,
+      adminJobTitle: req.body.adminJobTitle,
+      adminDepartment: req.body.adminDepartment,
+      adminEmail: req.body.adminEmail,
+      adminPhone: req.body.adminPhone,
+      adminUsername: req.body.adminUsername,
+      adminPassword: req.body.adminPassword,
+
+      acceptedTerms: req.body.acceptedTerms === "true",
+      acceptedPrivacy: req.body.acceptedPrivacy === "true",
+      acceptedCompliance: req.body.acceptedCompliance === "true",
+
+      role: req.body.role || "Viewer"
+    };
+
+    // 🖼 Handle uploaded files (if present)
+    if (req.files?.logo?.[0]) {
+      updateData.logoUrl = req.files.logo[0].filename;
     }
-    
-    res.json({ success: true, university: updated });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    if (req.files?.accreditation?.[0]) {
+      updateData.accreditationCertificateUrl = req.files.accreditation[0].filename;
+    }
+    if (req.files?.registrationDocs?.length > 0) {
+      updateData.registrationDocumentsUrls = req.files.registrationDocs.map(file => file.filename);
+    }
+
+    const updatedUniversity = await University.findByIdAndUpdate(
+      universityId,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedUniversity) {
+      return res.status(404).json({
+        success: false,
+        message: "University not found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "University updated successfully",
+      university: updatedUniversity
+    });
+  } catch (error) {
+    console.error("Update university error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update university"
+    });
   }
 };
+
 
 const approveUniversity = async (req, res) => {
   try {
@@ -318,6 +462,7 @@ const getRolePermissions = async (req, res) => {
 module.exports = {
   createUniversity,
   getAllUniversities,
+  getUniversityById,
   updateUniversity,
   approveUniversity,
   suspendUniversity,

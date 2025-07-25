@@ -5,7 +5,7 @@ const {
   loginAdmin,
   updateAdmin,
   createAgent,
-  verifyToken  // Add this new function
+  verifyToken
 } = require('../../controllers/SuperAdmin/authController');
 const verifyAdminToken = require('../../middlewares/SuperAdmin/verifyAdminToken');
 
@@ -13,6 +13,6 @@ const verifyAdminToken = require('../../middlewares/SuperAdmin/verifyAdminToken'
 router.post('/login', loginAdmin);
 router.patch('/update', verifyAdminToken, updateAdmin);
 router.post('/create-agent', verifyAdminToken, createAgent);
-router.get('/verify-token', verifyAdminToken, verifyToken); // New route for token verification
+router.get('/verify-token', verifyAdminToken, verifyToken); 
 
 module.exports = router;
