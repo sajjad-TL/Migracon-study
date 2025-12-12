@@ -14,7 +14,7 @@ const agentNotificationSchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
-    enum: ['Notes', 'Messages', 'Reminders', 'Updates'], // Add validation
+    enum: ['Notes', 'Messages', 'Reminders', 'Updates', 'Document Request'], // Add validation
     default: 'Updates'
   },
   isRead: {

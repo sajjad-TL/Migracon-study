@@ -1,24 +1,19 @@
 const StudyProgram = require('../../models/SuperAdmin/StudyProgram');
 const University = require('../../models/SuperAdmin/University'); //
 
-// Create Study Program
 const createProgram = async (req, res) => {
   try {
     const programData = req.body;
 
-    // Step 1: Create the study program
     const program = new StudyProgram(programData);
     await program.save();
-
-    // Step 2: Try to find a matching university using campusLocation
     const university = await University.findOne({
-      $or: [
-        { name: { $regex: programData.campusLocation, $options: 'i' } },
-        { city: { $regex: programData.campusLocation, $options: 'i' } }
-      ]
-    });
+  $or: [
+    { name: { $regex: programData.campusLocation, $options: 'i' } },
+    { city: { $regex: programData.campusLocation, $options: 'i' } }
+  ]
+});
 
-    // Step 3: If a match is found, push the program ID to the university's programs
     if (university) {
       university.programs = university.programs || [];
       university.programs.push(program._id);

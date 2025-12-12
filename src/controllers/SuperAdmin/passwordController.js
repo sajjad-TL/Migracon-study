@@ -3,14 +3,13 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
 
-// Step 1: Send OTP
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
   try {
     const admin = await Admin.findOne({ email });
     if (!admin) return res.status(404).json({ message: 'Admin not found' });
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpiry = Date.now() + 10 * 60 * 1000; // 10 mins
 
     admin.otp = otp;
@@ -48,7 +47,7 @@ exports.verifyOTP = async (req, res) => {
       return res.status(400).json({ message: 'Invalid or expired OTP' });
     }
 
-    admin.otpVerified = true; // temporarily mark as verified
+    admin.otpVerified = true;
     await admin.save();
 
     res.json({ message: 'OTP verified' });
@@ -58,7 +57,6 @@ exports.verifyOTP = async (req, res) => {
   }
 };
 
-// Step 3: Reset Password
 exports.resetPassword = async (req, res) => {
   const { email, newPassword } = req.body;
   try {

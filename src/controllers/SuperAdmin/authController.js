@@ -3,21 +3,18 @@ const jwt = require('jsonwebtoken');
 const Admin = require('../../models/SuperAdmin/Admin');
 const Agent = require('../../models/Agent/agent.model');
 
-// LOGIN ADMIN
 const loginAdmin = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    // Check if there's already an admin in the database
     const existingAdmin = await Admin.findOne();
 
-    // If no admin exists, register the first user as super admin
     if (!existingAdmin) {
       const hashedPassword = await bcrypt.hash(password, 10);
       const newAdmin = new Admin({
         email,
         password: hashedPassword,
-        isSuperAdmin: true,  // First registered user becomes super admin
+        isSuperAdmin: true,
       });
       await newAdmin.save();
 
@@ -25,12 +22,10 @@ const loginAdmin = async (req, res) => {
       return res.json({ token, message: "First admin registered successfully" });
     }
 
-    // If an admin exists, allow only the first admin (super admin) to log in
     if (existingAdmin.email !== email) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    // If admin found, verify password
     const isMatch = await bcrypt.compare(password, existingAdmin.password);
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid email or password" });
@@ -44,7 +39,6 @@ const loginAdmin = async (req, res) => {
       message: `Admin ${email} logged in.`,
     });
 
-    // If password matches, send JWT token
     const token = jwt.sign({ email, role: 'admin', isSuperAdmin: true }, process.env.JWT_SECRET_ADMIN, { expiresIn: '1d' });
     res.json({ token, message: "Login successful" });
 
@@ -54,7 +48,6 @@ const loginAdmin = async (req, res) => {
   }
 };
 
-// UPDATE ADMIN (WITH CURRENT PASSWORD CONFIRMATION)
 const updateAdmin = async (req, res) => {
   const { currentEmail, currentPassword, newEmail, newPassword } = req.body;
 
@@ -130,11 +123,9 @@ const updateAdmin = async (req, res) => {
   }
 };
 
-
-// Add this function in your authController.js file
 const verifyToken = async (req, res) => {
   try {
-    // If middleware passes, token is valid
+    
     res.status(200).json({ 
       valid: true, 
       admin: req.admin,

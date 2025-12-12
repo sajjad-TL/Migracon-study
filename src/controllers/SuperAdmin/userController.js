@@ -1,7 +1,6 @@
 const User = require('../../models/SuperAdmin/user.model');
 const University = require('../../models/SuperAdmin/University');
 
-// Create a new user
 const createUser = async (req, res) => {
   try {
     console.log('📥 Incoming createUser payload:', JSON.stringify(req.body, null, 2));
@@ -42,7 +41,7 @@ const createUser = async (req, res) => {
     });
 
     if (!existingUniversity) {
-      const generatedUniversityId = `UNI${Date.now()}`; 
+      const generatedUniversityId = `UNI${Date.now()}`;
 
       try {
         existingUniversity = new University({
@@ -131,7 +130,6 @@ const deleteUserById = async (req, res) => {
   }
 };
 
-// UPDATE user by ID
 const updateUserById = async (req, res) => {
   try {
     const {
@@ -152,7 +150,6 @@ const updateUserById = async (req, res) => {
       forcePasswordChange
     } = req.body;
 
-    // Check if email or username already exists (excluding current user)
     const existingUser = await User.findOne({
       $and: [
         { _id: { $ne: req.params.id } },
@@ -161,13 +158,12 @@ const updateUserById = async (req, res) => {
     });
 
     if (existingUser) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email or Username already exists.' 
+      return res.status(400).json({
+        success: false,
+        message: 'Email or Username already exists.'
       });
     }
 
-    // Prepare update data
     const updateData = {
       universityId,
       fullName,
@@ -185,14 +181,13 @@ const updateUserById = async (req, res) => {
       forcePasswordChange
     };
 
-    // Only update password if provided
     if (password && password.trim() !== '') {
       updateData.password = password;
     }
 
     const updatedUser = await User.findByIdAndUpdate(
-      req.params.id, 
-      updateData, 
+      req.params.id,
+      updateData,
       {
         new: true,
         runValidators: true
@@ -203,21 +198,20 @@ const updateUserById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    res.status(200).json({ 
-      success: true, 
-      message: 'User updated successfully', 
-      user: updatedUser 
+    res.status(200).json({
+      success: true,
+      message: 'User updated successfully',
+      user: updatedUser
     });
   } catch (error) {
     console.error('Error updating user:', error);
-    
-    // Handle validation errors
+
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map(err => err.message);
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Validation error', 
-        errors 
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors
       });
     }
 
@@ -225,20 +219,18 @@ const updateUserById = async (req, res) => {
   }
 };
 
-// Get users with pagination and filtering
 const getUsersWithPagination = async (req, res) => {
   try {
-    const { 
-      page = 1, 
-      limit = 10, 
-      search = '', 
-      status = '', 
-      role = '' 
+    const {
+      page = 1,
+      limit = 10,
+      search = '',
+      status = '',
+      role = ''
     } = req.query;
 
     const query = {};
-    
-    // Search filter
+
     if (search) {
       query.$or = [
         { fullName: { $regex: search, $options: 'i' } },
@@ -247,18 +239,16 @@ const getUsersWithPagination = async (req, res) => {
       ];
     }
 
-    // Status filter
     if (status && status !== 'All Status') {
       query.accountStatus = status;
     }
 
-    // Role filter
     if (role && role !== 'All Roles') {
       query.role = role;
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    
+
     const users = await User.find(query)
       .populate('universityId')
       .sort({ createdAt: -1 })
@@ -286,15 +276,14 @@ const getUsersWithPagination = async (req, res) => {
   }
 };
 
-// Bulk operations
 const bulkUpdateUsers = async (req, res) => {
   try {
     const { userIds, updateData } = req.body;
 
     if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please provide valid user IDs' 
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide valid user IDs'
       });
     }
 
@@ -320,9 +309,9 @@ const bulkDeleteUsers = async (req, res) => {
     const { userIds } = req.body;
 
     if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please provide valid user IDs' 
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide valid user IDs'
       });
     }
 

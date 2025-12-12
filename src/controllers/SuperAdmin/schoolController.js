@@ -1,6 +1,5 @@
 const School = require('../../models/SuperAdmin/school');
 
-// Create
 exports.createSchool = async (req, res) => {
   try {
     const {
@@ -30,7 +29,6 @@ exports.createSchool = async (req, res) => {
   }
 };
 
-// Read all
 exports.getAllSchools = async (req, res) => {
   try {
     const schools = await School.find().sort({ createdAt: -1 });
@@ -40,7 +38,6 @@ exports.getAllSchools = async (req, res) => {
   }
 };
 
-// Read one
 exports.getSchoolById = async (req, res) => {
   try {
     const school = await School.findById(req.params.id);
@@ -51,7 +48,6 @@ exports.getSchoolById = async (req, res) => {
   }
 };
 
-// Update
 exports.updateSchool = async (req, res) => {
   try {
     const school = await School.findByIdAndUpdate(req.params.id, req.body, {
@@ -65,7 +61,6 @@ exports.updateSchool = async (req, res) => {
   }
 };
 
-// Delete
 exports.deleteSchool = async (req, res) => {
   try {
     const school = await School.findByIdAndDelete(req.params.id);
@@ -76,7 +71,6 @@ exports.deleteSchool = async (req, res) => {
   }
 };
 
-// With stats
 exports.getSchoolsWithStats = async (req, res) => {
   try {
     const stats = await School.getSchoolsWithStats();

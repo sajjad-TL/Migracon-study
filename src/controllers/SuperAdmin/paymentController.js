@@ -31,14 +31,13 @@ const createPayment = async (req, res) => {
 
     await payment.save();
 
-    
+
     await sendEmail(
       'shakeel.sakha@tecklogics.com',
       'New Payment Received',
       `You received $${numericAmount} via ${method}.`
     );
 
-    // Emit WebSocket event
     if (global.io) {
       global.io.to(agentId.toString()).emit('newPayment', {
         message: `You’ve received a new payment of $${numericAmount}`,
@@ -84,7 +83,7 @@ const getLatestPaymentByAgent = async (req, res) => {
 
 const getAllPayments = async (req, res) => {
   try {
-    const payments = await Payment.find().sort({ createdAt: -1 }); 
+    const payments = await Payment.find().sort({ createdAt: -1 });
     res.status(200).json(payments);
   } catch (error) {
     console.error('Error fetching all payments:', error);
@@ -120,7 +119,6 @@ const updatePaymentStatus = async (req, res) => {
   }
 };
 
-// ✅ Delete payment
 const deletePayment = async (req, res) => {
   try {
     const { id } = req.params;
@@ -141,8 +139,8 @@ const deletePayment = async (req, res) => {
 module.exports = {
   createPayment,
   getPaymentsByAgent,
-  getLatestPaymentByAgent, 
+  getLatestPaymentByAgent,
   getAllPayments,
-  updatePaymentStatus,  // ✅ include this
+  updatePaymentStatus,
   deletePayment
 };

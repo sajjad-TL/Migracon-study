@@ -1,11 +1,10 @@
 const University = require("../../models/SuperAdmin/University");
 const Role = require("../../models/SuperAdmin/role");
-
-
+const StudyProgram = require('../../models/SuperAdmin/StudyProgram')
 
 const createUniversity = async (req, res) => {
   try {
-    const isDraft = req.query.draft === "true"; // 👈 check if it's a draft save
+    const isDraft = req.query.draft === "true";
 
     const {
       name,
@@ -14,18 +13,15 @@ const createUniversity = async (req, res) => {
       establishedYear,
       type,
       accreditationStatus,
-
       country,
       state,
       city,
       postalCode,
       address,
-
       mainPhone,
       admissionsPhone,
       mainEmail,
       admissionsEmail,
-
       adminFirstName,
       adminLastName,
       adminJobTitle,
@@ -34,7 +30,6 @@ const createUniversity = async (req, res) => {
       adminPhone,
       adminUsername,
       adminPassword,
-
       acceptedTerms,
       acceptedPrivacy,
       acceptedCompliance,
@@ -51,18 +46,15 @@ const createUniversity = async (req, res) => {
       establishedYear,
       type,
       accreditationStatus,
-
       country,
       state,
       city,
       postalCode,
       address,
-
       mainPhone,
       admissionsPhone,
       mainEmail,
       admissionsEmail,
-
       adminFirstName,
       adminLastName,
       adminJobTitle,
@@ -71,21 +63,17 @@ const createUniversity = async (req, res) => {
       adminPhone,
       adminUsername,
       adminPassword,
-
       acceptedTerms: acceptedTerms === "true",
       acceptedPrivacy: acceptedPrivacy === "true",
       acceptedCompliance: acceptedCompliance === "true",
-
       role: role || "Viewer",
-      status: isDraft ? "Draft" : "Pending", // 👈 set status conditionally
-
+      status: isDraft ? "Draft" : "Pending",
       logoUrl: req.files?.logo?.[0]?.filename || "",
       accreditationCertificateUrl: req.files?.accreditation?.[0]?.filename || "",
       registrationDocumentsUrls: req.files?.registrationDocs?.map(file => file.filename) || []
     });
 
     await newUniversity.save();
-
     res.status(201).json({
       success: true,
       message: isDraft
@@ -103,9 +91,8 @@ const createUniversity = async (req, res) => {
 const getAllUniversities = async (req, res) => {
   try {
     const universities = await University.find()
-      .populate('programs') // ✅ Populate linked programs
+      .populate('programs')
       .sort({ createdAt: -1 });
-
     res.status(200).json({
       success: true,
       universities
@@ -143,18 +130,15 @@ const updateUniversity = async (req, res) => {
       establishedYear: req.body.establishedYear,
       type: req.body.type,
       accreditationStatus: req.body.accreditationStatus,
-
       country: req.body.country,
       state: req.body.state,
       city: req.body.city,
       postalCode: req.body.postalCode,
       address: req.body.address,
-
       mainPhone: req.body.mainPhone,
       admissionsPhone: req.body.admissionsPhone,
       mainEmail: req.body.mainEmail,
       admissionsEmail: req.body.admissionsEmail,
-
       adminFirstName: req.body.adminFirstName,
       adminLastName: req.body.adminLastName,
       adminJobTitle: req.body.adminJobTitle,
@@ -163,15 +147,12 @@ const updateUniversity = async (req, res) => {
       adminPhone: req.body.adminPhone,
       adminUsername: req.body.adminUsername,
       adminPassword: req.body.adminPassword,
-
       acceptedTerms: req.body.acceptedTerms === "true",
       acceptedPrivacy: req.body.acceptedPrivacy === "true",
       acceptedCompliance: req.body.acceptedCompliance === "true",
-
       role: req.body.role || "Viewer"
     };
 
-    // 🖼 Handle uploaded files (if present)
     if (req.files?.logo?.[0]) {
       updateData.logoUrl = req.files.logo[0].filename;
     }
@@ -213,15 +194,15 @@ const updateUniversity = async (req, res) => {
 const approveUniversity = async (req, res) => {
   try {
     const updated = await University.findByIdAndUpdate(
-      req.params.id, 
-      { status: "Active" }, 
+      req.params.id,
+      { status: "Active" },
       { new: true }
     );
-    
+
     if (!updated) {
       return res.status(404).json({ success: false, error: "University not found" });
     }
-    
+
     res.json({ success: true, university: updated });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -231,15 +212,15 @@ const approveUniversity = async (req, res) => {
 const suspendUniversity = async (req, res) => {
   try {
     const updated = await University.findByIdAndUpdate(
-      req.params.id, 
-      { status: "Suspended" }, 
+      req.params.id,
+      { status: "Suspended" },
       { new: true }
     );
-    
+
     if (!updated) {
       return res.status(404).json({ success: false, error: "University not found" });
     }
-    
+
     res.json({ success: true, university: updated });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -249,20 +230,17 @@ const suspendUniversity = async (req, res) => {
 const deleteUniversity = async (req, res) => {
   try {
     const deleted = await University.findByIdAndDelete(req.params.id);
-    
+
     if (!deleted) {
       return res.status(404).json({ success: false, error: "University not found" });
     }
-    
+
     res.json({ success: true, message: "University deleted successfully" });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 };
 
-
-
-// Role Management
 const getAllRoles = async (req, res) => {
   try {
     const roles = await Role.find({ isActive: true })
@@ -286,7 +264,6 @@ const getAllRoles = async (req, res) => {
 const createRole = async (req, res) => {
   try {
     const roleData = req.body;
-    
     if (!roleData.name) {
       return res.status(400).json({
         success: false,
@@ -298,7 +275,7 @@ const createRole = async (req, res) => {
       ...roleData,
       createdBy: req.user?.name || 'System Admin'
     });
-    
+
     await role.save();
 
     res.status(201).json({
@@ -308,7 +285,7 @@ const createRole = async (req, res) => {
     });
   } catch (error) {
     console.error('Create role error:', error);
-    
+
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
@@ -372,8 +349,8 @@ const updateRole = async (req, res) => {
 
 const deleteRole = async (req, res) => {
   try {
-    const { id } = req.params;
 
+    const { id } = req.params;
     if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({
         success: false,
@@ -408,9 +385,6 @@ const deleteRole = async (req, res) => {
 };
 
 
-
-
-// Role Permissions
 const getRolePermissions = async (req, res) => {
   try {
     const roles = await Role.find({ isActive: true }).lean();
@@ -419,8 +393,6 @@ const getRolePermissions = async (req, res) => {
       const permissions = role.permissions || {};
       const permissionKeys = Object.keys(permissions);
       const enabledPermissions = permissionKeys.filter(key => permissions[key]);
-      
-      // Determine access level
       let access = 'Limited Access';
       if (enabledPermissions.length === permissionKeys.length && permissionKeys.length > 0) {
         access = 'Full Access';
@@ -428,13 +400,11 @@ const getRolePermissions = async (req, res) => {
         access = 'No Access';
       }
 
-      // Format permission names
       const formattedPermissions = permissionKeys.map(key => {
         const formattedName = key
           .replace(/([A-Z])/g, ' $1')
           .replace(/^./, str => str.toUpperCase())
           .trim();
-        
         return formattedName;
       });
 
@@ -445,19 +415,37 @@ const getRolePermissions = async (req, res) => {
       };
     });
 
-    res.status(200).json({ 
-      success: true, 
-      data: formattedRoles 
+    res.status(200).json({
+      success: true,
+      data: formattedRoles
     });
   } catch (error) {
     console.error('Get role permissions error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to fetch role permissions' 
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch role permissions'
     });
   }
 };
 
+const getSingleUniversity = async (req, res) => {
+  try {
+    const university = await University.findById(req.params.id)
+      .populate({
+        path: 'programs',
+        model: 'StudyProgram'
+      });
+
+    if (!university) {
+      return res.status(404).json({ success: false, message: 'University not found' });
+    }
+
+    res.status(200).json({ success: true, university });
+  } catch (err) {
+    console.error("Error fetching university:", err);
+    res.status(500).json({ success: false, message: "Server error", error: err.message });
+  }
+};
 
 module.exports = {
   createUniversity,
@@ -471,5 +459,6 @@ module.exports = {
   getAllRoles,
   createRole,
   updateRole,
-  deleteRole
+  deleteRole,
+  getSingleUniversity
 };

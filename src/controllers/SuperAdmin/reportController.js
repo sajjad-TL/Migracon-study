@@ -1,5 +1,3 @@
-// controllers/SuperAdmin/report.controller.js
-
 const Report = require("../../models/SuperAdmin/Reports");
 const Commission = require("../../models/SuperAdmin/Commission");
 const Student = require("../../models/Agent/student.model");
@@ -31,13 +29,11 @@ const createReport = async (req, res) => {
 
     const monthlyApplications = applicationsThisMonth.length;
 
-  // Ensure any 'Paid' commissions are marked as 'Approved' (if business logic allows)
       await Commission.updateMany(
         { status: 'Paid', createdAt: { $gte: startOfMonth, $lte: endOfMonth } },
         { $set: { status: 'Approved' } }
       );
 
-      // Now fetch only Approved commissions
       const commissionsThisMonth = await Commission.find({
         createdAt: { $gte: startOfMonth, $lte: endOfMonth },
         status: 'Approved'
@@ -169,7 +165,7 @@ const getReports = async (req, res) => {
     const sortedReports = allReports.sort((a, b) => {
       const dateA = new Date(`${a.month} 1, ${a.year}`);
       const dateB = new Date(`${b.month} 1, ${b.year}`);
-      return dateA - dateB; // ascending
+      return dateA - dateB;
     });
 
     let filteredReports = [];
@@ -347,7 +343,6 @@ const regenerateReport = async (req, res) => {
     res.status(500).json({ message: "Failed to regenerate report", error: err.message });
   }
 };
-
 
 
 module.exports = { 

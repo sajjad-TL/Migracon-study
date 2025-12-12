@@ -1,35 +1,26 @@
-// ===== FIXED SERVER.JS =====
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const path = require("path");
 const http = require("http");
 const socketIo = require("socket.io");
-
-// Load environment variables
 dotenv.config();
 
 const app = express();
-
-// Create HTTP server for Socket.IO
 const server = http.createServer(app);
 
-// Setup Socket.IO
 const io = socketIo(server, {
   cors: {
-    origin: "*", // In production, restrict to your frontend domain
+    origin: "*",
     methods: ["GET", "POST"],
   },
 });
 
-// Attach io instance to app for global access
 app.set("io", io);
 
-// Socket connection events
 io.on("connection", (socket) => {
   console.log("✅ Socket connected:", socket.id);
 
-  // Join agent-specific room
   socket.on("join-agent-room", (agentId) => {
     socket.join(`agent-${agentId}`);
     console.log(`🏠 Agent ${agentId} joined room: agent-${agentId}`);
@@ -47,7 +38,6 @@ const allowedOrigins = [
   'http://localhost:5175',
   'http://localhost:5176',
   'http://localhost:5177',
-  // 'https://your-production-domain.com'
 ];
 
 const corsOptions = {
@@ -61,20 +51,13 @@ const corsOptions = {
   credentials: true,
 };
 app.use(cors(corsOptions));
-
-// --- MIDDLEWARE ---
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// --- DATABASE ---
 const connectDB = require("./src/config/Agent/db");
 connectDB();
 
-
-
-
-// --- ROUTES ---
 app.use("/api/other-auth", require("./src/routes/Agent/auth.routes"));
 app.use("/student", require("./src/routes/Agent/student.routes"));
 app.use("/api/review", require("./src/routes/Agent/review.routes"));
@@ -92,7 +75,7 @@ app.use("/agent-notifications", require("./src/routes/Agent/agentNotification.ro
 app.use('/profilePictures', express.static(path.join(__dirname, 'profilePictures')));
 app.use('/api/users', require("./src/routes/SuperAdmin/userRoutes"));
 app.use('/api/study-programs', require("./src/routes/SuperAdmin/studyProgramsRoutes"));
-
+app.use('/api/task', require("./src/routes/SuperAdmin/taskRoutes"));
 
 
 // --- START SERVER ---

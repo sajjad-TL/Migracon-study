@@ -7,77 +7,105 @@ const Student = require('../../models/Agent/student.model');
 const PaymentRequest = require('../../models/SuperAdmin/PaymentRequest');
 const Payment = require('../../models/SuperAdmin/Payment');
 
-// Get Dashboard Statistics
 router.get('/dashboard/stats', async (req, res) => {
   try {
-    // Get current date info
     const now = new Date();
-    const currentMonth = now.getMonth() + 1; // 1-12
+    const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
-    
-    // Start and end of current month for precise filtering
+
     const startOfMonth = new Date(currentYear, now.getMonth(), 1);
     const endOfMonth = new Date(currentYear, now.getMonth() + 1, 0, 23, 59, 59, 999);
 
-    // Total Commission (all time)
     const totalCommissionResult = await Commission.aggregate([
       { $match: { status: { $in: ['Approved', 'Paid'] } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
     const totalCommission = totalCommissionResult[0]?.total || 0;
 
-    // Pending Payouts (approved but not paid)
+    console.log('Total Commission:', totalCommission);
+
     const pendingPayoutsResult = await Commission.aggregate([
       { $match: { status: 'Approved' } },
-      { $group: { _id: null, total: { $sum: '$amount' } } }
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$amount' },
+          count: { $sum: 1 }
+        }
+      }
     ]);
     const pendingPayouts = pendingPayoutsResult[0]?.total || 0;
+    const pendingPayoutsCount = pendingPayoutsResult[0]?.count || 0;
 
-    // Count of pending payment requests
     const pendingRequestsCount = await PaymentRequest.countDocuments({ status: 'Pending' });
 
-    // Paid This Month - using date range for better accuracy
-// Try with paidDate first
-let paidThisMonth = 0;
+    let paidThisMonth = 0;
+    let paymentsProcessedCount = 0;
 
-const paidThisMonthWithPaidDate = await Commission.aggregate([
-  {
-    $match: {
-      status: 'Paid',
-      paidDate: { $gte: startOfMonth, $lte: endOfMonth }
+    const paidThisMonthWithPaidDate = await Commission.aggregate([
+      {
+        $match: {
+          status: 'Paid',
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$amount" },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    console.log('Paid This Month with paidDate:', paidThisMonthWithPaidDate);
+
+
+    if (paidThisMonthWithPaidDate.length > 0) {
+      paidThisMonth = paidThisMonthWithPaidDate[0].total;
+      paymentsProcessedCount = paidThisMonthWithPaidDate[0].count;
+    } else {
+
+      const paidThisMonthFallback = await Commission.aggregate([
+        {
+          $match: {
+            status: 'Paid',
+            createdAt: { $gte: startOfMonth, $lte: endOfMonth }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: '$amount' },
+            count: { $sum: 1 }
+          }
+        }
+      ]);
+
+      paidThisMonth = paidThisMonthFallback[0]?.total || 0;
+      paymentsProcessedCount = paidThisMonthFallback[0]?.count || 0;
     }
-  },
-  { $group: { _id: null, total: { $sum: '$amount' } } }
-]);
 
-if (paidThisMonthWithPaidDate.length > 0) {
-  paidThisMonth = paidThisMonthWithPaidDate[0].total;
-} else {
-  // fallback: use createdAt if paidDate missing
-  const paidThisMonthFallback = await Commission.aggregate([
-    {
-      $match: {
-        status: 'Paid',
-        createdAt: { $gte: startOfMonth, $lte: endOfMonth }
-      }
-    },
-    { $group: { _id: null, total: { $sum: '$amount' } } }
-  ]);
-  paidThisMonth = paidThisMonthFallback[0]?.total || 0;
-}
+    if (paidThisMonth === 0) {
+      const paymentRecordsThisMonth = await Payment.aggregate([
+        {
+          $match: {
+            status: 'completed',
+            paymentDate: { $gte: startOfMonth, $lte: endOfMonth }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: '$amount' },
+            count: { $sum: 1 }
+          }
+        }
+      ]);
 
+      paidThisMonth = paymentRecordsThisMonth[0]?.total || 0;
+      paymentsProcessedCount = paymentRecordsThisMonth[0]?.count || 0;
+    }
 
-
-    // Count of payments processed this month
-    const paymentsProcessedCount = await Commission.countDocuments({
-      status: 'Paid',
-      paidDate: {
-        $gte: startOfMonth,
-        $lte: endOfMonth
-      }
-    });
-
-    // Alternative: Also check Payment collection for this month
     const paymentRecordsThisMonth = await Payment.aggregate([
       {
         $match: {
@@ -91,42 +119,38 @@ if (paidThisMonthWithPaidDate.length > 0) {
       { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
     ]);
 
-    // Use whichever has data (fallback mechanism)
     const finalPaidThisMonth = paidThisMonth > 0 ? paidThisMonth : (paymentRecordsThisMonth[0]?.total || 0);
     const finalPaymentsCount = paymentsProcessedCount > 0 ? paymentsProcessedCount : (paymentRecordsThisMonth[0]?.count || 0);
 
-    // Active Agents (agents with at least one commission)
     const activeAgentsResult = await Commission.aggregate([
       { $group: { _id: '$agentId' } },
       { $count: 'activeAgents' }
     ]);
     const activeAgents = activeAgentsResult[0]?.activeAgents || 0;
 
-    // Growth calculation - previous month
     const lastMonth = currentMonth === 1 ? 12 : currentMonth - 1;
     const lastMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
     const startOfLastMonth = new Date(lastMonthYear, lastMonth - 1, 1);
     const endOfLastMonth = new Date(lastMonthYear, lastMonth, 0, 23, 59, 59, 999);
-    
+
     const lastMonthCommissionResult = await Commission.aggregate([
-      { 
-        $match: { 
+      {
+        $match: {
           status: { $in: ['Approved', 'Paid'] },
           createdAt: {
             $gte: startOfLastMonth,
             $lte: endOfLastMonth
           }
-        } 
+        }
       },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
     const lastMonthCommission = lastMonthCommissionResult[0]?.total || 0;
-    
-    const commissionGrowthPercent = lastMonthCommission > 0 
+
+    const commissionGrowthPercent = lastMonthCommission > 0
       ? Math.round(((totalCommission - lastMonthCommission) / lastMonthCommission) * 100)
       : totalCommission > 0 ? 100 : 0;
 
-    // Debug logging
     console.log('Dashboard Stats Debug:', {
       currentMonth,
       currentYear,
@@ -143,6 +167,7 @@ if (paidThisMonthWithPaidDate.length > 0) {
       totalCommission,
       pendingPayouts,
       pendingRequestsCount,
+      pendingPayoutsCount,
       paidThisMonth: finalPaidThisMonth,
       paymentsProcessedCount: finalPaymentsCount,
       activeAgents,
@@ -154,12 +179,10 @@ if (paidThisMonthWithPaidDate.length > 0) {
   }
 });
 
-// Get All Agents with Commission Data
 router.get('/agents', async (req, res) => {
   try {
     const { page = 1, limit = 10, search = '', country = '' } = req.query;
-    
-    // Build search filter
+
     let searchFilter = {};
     if (search) {
       searchFilter = {
@@ -171,7 +194,6 @@ router.get('/agents', async (req, res) => {
       };
     }
 
-    // Add country filter if specified
     if (country) {
       searchFilter.country = country;
     }
@@ -183,50 +205,42 @@ router.get('/agents', async (req, res) => {
 
     const agentsWithCommissions = await Promise.all(
       agents.map(async (agent) => {
-        // Total Commission
         const totalCommissionResult = await Commission.aggregate([
           { $match: { agentId: agent._id, status: { $in: ['Approved', 'Paid'] } } },
           { $group: { _id: null, total: { $sum: '$amount' } } }
         ]);
         const totalCommission = totalCommissionResult[0]?.total || 0;
 
-        // This Month Commission
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-        
+
         const thisMonthResult = await Commission.aggregate([
-          { 
-            $match: { 
+          {
+            $match: {
               agentId: agent._id,
               status: { $in: ['Approved', 'Paid'] },
               createdAt: {
                 $gte: startOfMonth,
                 $lte: endOfMonth
               }
-            } 
+            }
           },
           { $group: { _id: null, total: { $sum: '$amount' } } }
         ]);
         const thisMonth = thisMonthResult[0]?.total || 0;
 
-        // Pending Amount
         const pendingAmountResult = await Commission.aggregate([
           { $match: { agentId: agent._id, status: 'Approved' } },
           { $group: { _id: null, total: { $sum: '$amount' } } }
         ]);
         const pendingAmount = pendingAmountResult[0]?.total || 0;
-
-        // Pending Requests Count
         const pendingRequests = await PaymentRequest.countDocuments({
           agentId: agent._id,
           status: 'Pending'
         });
 
-        // Applications Count
         const applications = await Student.countDocuments({ agentId: agent._id });
-
-        // Successful Applications
         const successful = await Student.aggregate([
           { $match: { agentId: agent._id } },
           { $unwind: '$applications' },
@@ -265,15 +279,13 @@ router.get('/agents', async (req, res) => {
   }
 });
 
-// Create sample data for testing (remove in production)
 router.post('/create-sample-data', async (req, res) => {
   try {
-    // Create sample commissions with paid status for current month
     const now = new Date();
     const sampleCommissions = [
       {
-        agentId: new mongoose.Types.ObjectId(), 
-        studentId: new mongoose.Types.ObjectId(), 
+        agentId: new mongoose.Types.ObjectId(),
+        studentId: new mongoose.Types.ObjectId(),
         amount: 500,
         status: 'Paid',
         type: 'Application Fee',
@@ -286,8 +298,8 @@ router.post('/create-sample-data', async (req, res) => {
         createdAt: now
       },
       {
-        agentId: new mongoose.Types.ObjectId(), // Replace with actual agent ID
-        studentId: new mongoose.Types.ObjectId(), // Replace with actual student ID
+        agentId: new mongoose.Types.ObjectId(),
+        studentId: new mongoose.Types.ObjectId(),
         amount: 750,
         status: 'Paid',
         type: 'Application Fee',
@@ -309,16 +321,15 @@ router.post('/create-sample-data', async (req, res) => {
   }
 });
 
-// Process Payment Request
 router.put('/payment-request/:requestId', async (req, res) => {
   try {
     const { requestId } = req.params;
     const { status, processedBy, rejectionReason } = req.body;
 
-    const updateData = { 
-      status, 
-      processedBy, 
-      processedDate: new Date() 
+    const updateData = {
+      status,
+      processedBy,
+      processedDate: new Date()
     };
 
     if (status === 'Rejected') {
@@ -335,7 +346,6 @@ router.put('/payment-request/:requestId', async (req, res) => {
       return res.status(404).json({ error: 'Payment request not found' });
     }
 
-    // If approved, create payment record and update commission status
     if (status === 'Paid') {
       const payment = new Payment({
         agentId: paymentRequest.agentId._id,
@@ -343,19 +353,17 @@ router.put('/payment-request/:requestId', async (req, res) => {
         method: 'Bank Transfer',
         transactionId: `TXN${Date.now()}`,
         status: 'completed',
-        paymentDate: new Date() // Make sure to set payment date
+        paymentDate: new Date()
       });
       await payment.save();
-
-      // Update related commissions to Paid status with current date
       await Commission.updateMany(
-        { 
-          agentId: paymentRequest.agentId._id, 
-          status: 'Approved' 
+        {
+          agentId: paymentRequest.agentId._id,
+          status: 'Approved'
         },
-        { 
-          status: 'Paid', 
-          paidDate: new Date() 
+        {
+          status: 'Paid',
+          paidDate: new Date()
         }
       );
     }
@@ -367,7 +375,6 @@ router.put('/payment-request/:requestId', async (req, res) => {
   }
 });
 
-// Get Agent Commission Details
 router.get('/agent/:agentId', async (req, res) => {
   try {
     const { agentId } = req.params;
@@ -386,16 +393,15 @@ router.get('/agent/:agentId', async (req, res) => {
 
     const totalCommissions = await Commission.countDocuments({ agentId });
 
-    // Agent summary
-   const totalEarned = await Commission.aggregate([
-  { $match: { agentId: new mongoose.Types.ObjectId(agentId), status: { $in: ['Approved', 'Paid'] } } },
-  { $group: { _id: null, total: { $sum: '$amount' } } }
-]);
+    const totalEarned = await Commission.aggregate([
+      { $match: { agentId: new mongoose.Types.ObjectId(agentId), status: { $in: ['Approved', 'Paid'] } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
 
-const pendingAmount = await Commission.aggregate([
-  { $match: { agentId: new mongoose.Types.ObjectId(agentId), status: 'Approved' } },
-  { $group: { _id: null, total: { $sum: '$amount' } } }
-]);
+    const pendingAmount = await Commission.aggregate([
+      { $match: { agentId: new mongoose.Types.ObjectId(agentId), status: 'Approved' } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
 
 
     res.json({
@@ -416,7 +422,6 @@ const pendingAmount = await Commission.aggregate([
   }
 });
 
-// Create Commission
 router.post('/create', async (req, res) => {
   try {
     const { agentId, studentId, amount, type, description, program, institute } = req.body;
@@ -431,7 +436,7 @@ router.post('/create', async (req, res) => {
       institute,
       month: new Date().toLocaleString('default', { month: 'long' }),
       year: new Date().getFullYear(),
-      status: 'Pending' // Default status
+      status: 'Pending'
     });
 
     await commission.save();
@@ -451,13 +456,11 @@ router.post('/auto-generate', async (req, res) => {
       return res.status(400).json({ error: 'Student or agent not found' });
     }
 
-    // Find the specific application
     const application = student.applications.id(applicationId);
     if (!application) {
       return res.status(400).json({ error: 'Application not found' });
     }
 
-    // Check if commission already exists for this application
     const existingCommission = await Commission.findOne({
       studentId,
       applicationId
@@ -467,8 +470,7 @@ router.post('/auto-generate', async (req, res) => {
       return res.status(400).json({ error: 'Commission already exists for this application' });
     }
 
-    // Commission rate logic (you can customize this)
-    let commissionAmount = 500; // Base commission
+    let commissionAmount = 500;
     if (application.program?.toLowerCase().includes('master')) {
       commissionAmount = 750;
     } else if (application.program?.toLowerCase().includes('phd')) {
@@ -486,7 +488,7 @@ router.post('/auto-generate', async (req, res) => {
       institute: application.institute,
       month: new Date().toLocaleString('default', { month: 'long' }),
       year: new Date().getFullYear(),
-      status: 'Approved' // Auto-approve when application is accepted
+      status: 'Approved'
     });
 
     await commission.save();
@@ -497,14 +499,13 @@ router.post('/auto-generate', async (req, res) => {
   }
 });
 
-// Update Commission Status
 router.put('/:commissionId/status', async (req, res) => {
   try {
     const { commissionId } = req.params;
     const { status, approvedBy, rejectionReason } = req.body;
 
     const updateData = { status };
-    
+
     if (status === 'Approved') {
       updateData.approvedBy = approvedBy;
       updateData.approvedDate = new Date();
@@ -531,11 +532,10 @@ router.put('/:commissionId/status', async (req, res) => {
   }
 });
 
-// Get Payment Requests
 router.get('/payment-requests', async (req, res) => {
   try {
     const { page = 1, limit = 10, status = '' } = req.query;
-    
+
     let filter = {};
     if (status) {
       filter.status = status;
@@ -560,22 +560,20 @@ router.get('/payment-requests', async (req, res) => {
   }
 });
 
-// Create Payment Request
 router.post('/payment-request', async (req, res) => {
   try {
     const { agentId, amount, bankDetails, notes } = req.body;
 
-    // Check if agent has enough pending commission
     const pendingCommissionResult = await Commission.aggregate([
       { $match: { agentId: mongoose.Types.ObjectId(agentId), status: 'Approved' } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
-    
+
     const availableAmount = pendingCommissionResult[0]?.total || 0;
-    
+
     if (amount > availableAmount) {
-      return res.status(400).json({ 
-        error: 'Requested amount exceeds available commission balance' 
+      return res.status(400).json({
+        error: 'Requested amount exceeds available commission balance'
       });
     }
 
@@ -594,11 +592,10 @@ router.post('/payment-request', async (req, res) => {
   }
 });
 
-// Get Payment History
 router.get('/payment-history', async (req, res) => {
   try {
     const { page = 1, limit = 10, agentId = '' } = req.query;
-    
+
     let filter = { status: 'completed' };
     if (agentId) {
       filter.agentId = agentId;
@@ -624,11 +621,10 @@ router.get('/payment-history', async (req, res) => {
   }
 });
 
-// Export Reports
 router.get('/export', async (req, res) => {
   try {
     const { type = 'commissions', startDate, endDate, agentId } = req.query;
-    
+
     let filter = {};
     if (startDate && endDate) {
       filter.createdAt = {

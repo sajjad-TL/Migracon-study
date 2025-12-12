@@ -13,7 +13,8 @@ const {
   getAllRoles,
   createRole,
   deleteRole,
-  updateRole
+  updateRole,
+  getSingleUniversity
 } = require("../../controllers/SuperAdmin/universityController");
 
 router.post(
@@ -47,5 +48,7 @@ router.get('/roles', getAllRoles);
 router.post('/roles/create', createRole);
 router.patch('/roles/:id', updateRole);
 router.delete('/roles/:id', deleteRole);
+router.get('/single/:id', getSingleUniversity);
+
 
 module.exports = router;

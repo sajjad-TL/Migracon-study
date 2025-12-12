@@ -1,6 +1,5 @@
 const Program = require("../../models/SuperAdmin/program");
 
-// Create
 exports.createProgram = async (req, res) => {
   try {
     const program = await Program.create(req.body);
@@ -10,7 +9,6 @@ exports.createProgram = async (req, res) => {
   }
 };
 
-// Get All
 exports.getAllPrograms = async (req, res) => {
   try {
     const programs = await Program.find().populate('school');
@@ -20,7 +18,6 @@ exports.getAllPrograms = async (req, res) => {
   }
 };
 
-// Get One
 exports.getProgramById = async (req, res) => {
   try {
     const program = await Program.findById(req.params.id).populate('school');
@@ -31,7 +28,6 @@ exports.getProgramById = async (req, res) => {
   }
 };
 
-// Update
 exports.updateProgram = async (req, res) => {
   try {
     const program = await Program.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -42,7 +38,6 @@ exports.updateProgram = async (req, res) => {
   }
 };
 
-// Delete
 exports.deleteProgram = async (req, res) => {
   try {
     const program = await Program.findByIdAndDelete(req.params.id);

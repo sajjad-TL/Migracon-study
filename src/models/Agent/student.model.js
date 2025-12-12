@@ -10,7 +10,7 @@ const applicationSchema = new mongoose.Schema(
     startDate: { type: Date },
     status: {
       type: String,
-      enum: ["Active", "Inactive", "Pending", "Rejected", "Accepted", "not-paid", "Paid", "Withdrawn", "Approved"],
+      enum: ["Active", "Inactive", "Pending", "Rejected", "Accepted", "not-paid", "Paid", "Withdrawn", "Approved", "Doc Requested" ],
       default: "Pending",
     },
     requirements: { type: String },
